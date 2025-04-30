@@ -15,7 +15,6 @@ from biokb_taxtree.constants import (
     DB_DEFAULT_CONNECTION_STR,
     DEFAULT_PATH_UNZIPPED_DATA_FOLDER,
     NAME_COLUMNS,
-    NAME_DTYPES,
     NODE_COLUMNS,
     NODE_DTYPES,
     RANKED_LINEAGE_COLUMNS,
@@ -112,7 +111,15 @@ class DbManager:
             )
         return tree, tree_id
 
-    def get_tree_df(self, df_nodes: pd.DataFrame):
+    def get_tree_df(self, df_nodes: pd.DataFrame) -> pd.DataFrame:
+        """Get taxonomy tree as DataFrame
+
+        Args:
+            df_nodes (pd.DataFrame): _description_
+
+        Returns:
+            pd.DataFrame: _description_
+        """
         pc_dict = self.__get_parent_child_dict(df_nodes)
         root = TreeEntry(
             tree_id=1, tax_id=1, tree_parent_id=None, level=1, is_leaf=False
@@ -124,6 +131,21 @@ class DbManager:
         return pd.DataFrame(list(tree.values())).set_index("tax_id")
 
     def set_right_tree_ids(self, tree: dict[int, TreeEntry]):
+        """
+        Assigns the `right_tree_id` attribute for each entry in the tree.
+
+        Calculates and sets the `right_tree_id` for each `TreeEntry` in the
+        provided tree structure. The `right_tree_id` is determined based on the tree's
+        hierarchical relationships and sibling positions.
+
+        Args:
+            tree (dict[int, TreeEntry]): A dictionary representing the tree structure,
+                where the keys are tree IDs and the values are `TreeEntry` objects.
+
+        Modifies:
+            The `right_tree_id` attribute of each `TreeEntry` in the `tree` dictionary.
+        """
+
         tree_pc_dict = defaultdict(list)
         for child_tree_id, e in tree.items():
             if e.tree_parent_id:
@@ -165,7 +187,12 @@ class DbManager:
         self.create_db()
 
     @property
-    def all_tables_have_data(self):
+    def all_tables_have_data(self) -> bool:
+        """Checks if all tables have data
+
+        Returns:
+            bool: True if all tables have data.
+        """
         self.create_db()  # create tables if not exists
         with self.Session() as session:
             exists = []
@@ -174,6 +201,7 @@ class DbManager:
         return all(exists)
 
     def activate_foreign_key_check_in_sqlite(self):
+        """Activate foreign key check in SQLite if engine is SQLite."""
         if self.engine.name == "sqlite":
             with self.Session() as session:
                 session.execute(text("PRAGMA foreign_keys = ON"))
@@ -184,7 +212,7 @@ class DbManager:
                 session.execute(text("PRAGMA foreign_keys = OFF"))
 
     def import_data(self, only_if_db_empty: Optional[bool] = False):
-        """Import downloaded IPNI data into database.
+        """Import downloaded data into database.
 
         If only_if_db_empty=True imports data, if at least one table is empty.
 
@@ -212,6 +240,22 @@ class DbManager:
         logger.info("Data imported.")
 
     def import_ranked_lineage(self):
+        """
+        Imports ranked lineage data from `rankedlineage.dmp` into the database.
+
+        Reads `rankedlineage.dmp` containing ranked lineage data,
+        processes it, and inserts the data into the database table associated
+        with the `RankedLineage` model.
+
+
+
+        Raises:
+            FileNotFoundError: If the ranked lineage file does not exist.
+            pandas.errors.ParserError: If there is an error while parsing the file.
+            sqlalchemy.exc.SQLAlchemyError: If there is an error during the database
+                insertion process.
+        """
+
         logger.info(f"Start import ranked lineage")
         file_path = os.path.join(
             DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.RANKED_LINEAGE
@@ -236,6 +280,18 @@ class DbManager:
         )
 
     def import_nodes(self):
+        """
+        Imports taxonomic nodes data from `names.dmp`, processes it, and stores it in the database.
+
+        Reads `names.dmp` containing taxonomic node information, processes the data
+        to generate a tree structure, and inserts the resulting data into the database table associated
+        with the `Node` model.
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist.
+            ValueError: If the file format is invalid or does not match the expected structure.
+        """
+
         logger.info(f"Start import nodes")
         path = os.path.join(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.NODE)
         df = pd.read_csv(
@@ -256,6 +312,19 @@ class DbManager:
         )
 
     def import_names(self):
+        """
+        Imports taxonomic names from `names.dmp` into the database.
+
+        Reads `names.dmp` containing taxonomic names,
+        processes the data, and inserts it into the database table associated
+        with the `Name` model.
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist.
+            pandas.errors.ParserError: If there is an issue parsing the file.
+            sqlalchemy.exc.SQLAlchemyError: If there is an error during the database operation.
+        """
+
         logger.info(f"Start import names")
         path = os.path.join(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.NAME)
         df = pd.read_csv(
