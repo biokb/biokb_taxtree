@@ -211,7 +211,7 @@ class DbManager:
             with self.Session() as session:
                 session.execute(text("PRAGMA foreign_keys = OFF"))
 
-    def import_data(self, only_if_db_empty: Optional[bool] = False):
+    def import_data(self, only_if_db_empty: Optional[bool] = True):
         """Import downloaded data into database.
 
         If only_if_db_empty=True imports data, if at least one table is empty.
