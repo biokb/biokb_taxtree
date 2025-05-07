@@ -1,46 +1,46 @@
-version: "1.0"
-name: biokb_taxtree
+  version: "1.0"
+  name: biokb_taxtree
 
-services:
-  fastapi:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: localhost/taxtree
-    environment:
-      CONNECTION_STR: "mysql+pymysql://db_user:db_passwd@mysql/taxtree"
-    ports:
-      - 8080:81
-    depends_on:
-      mysql:
-        condition: service_healthy
+  services:
+    fastapi:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      image: localhost/taxtree
+      environment:
+        CONNECTION_STR: "mysql+pymysql://db_user:db_passwd@mysql/taxtree"
+      ports:
+        - 8080:81
+      depends_on:
+        mysql:
+          condition: service_healthy
 
-  pma:
-    image: docker.io/phpmyadmin/phpmyadmin:latest
-    ports:
-      - "8081:80"
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-    depends_on:
-      - mysql
+    pma:
+      image: docker.io/phpmyadmin/phpmyadmin:latest
+      ports:
+        - "8081:80"
+      environment:
+        PMA_HOST: mysql
+        PMA_PORT: 3306
+      depends_on:
+        - mysql
 
-  mysql:
-    image: docker.io/library/mysql:8
-    ports:
-      - "3307:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=root_passwd
-      - MYSQL_DATABASE=biokb
-      - MYSQL_USER=biokb_user
-      - MYSQL_PASSWORD=biokb_passwd
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    mysql:
+      image: docker.io/library/mysql:8
+      ports:
+        - "3307:3306"
+      environment:
+        - MYSQL_ROOT_PASSWORD=root_passwd
+        - MYSQL_DATABASE=biokb
+        - MYSQL_USER=biokb_user
+        - MYSQL_PASSWORD=biokb_passwd
+      volumes:
+        - mysql_data:/var/lib/mysql
+      healthcheck:
+        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
 
-volumes:
-  mysql_data:
+  volumes:
+    mysql_data:
