@@ -25,6 +25,7 @@ def download_and_unzip() -> str:
         str: _description_
     """
     os.makedirs(DATA_FOLDER, exist_ok=True)
+    urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
     logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
 
     with zipfile.ZipFile(PATH_TO_ZIP_FILE, "r") as zip_ref:
