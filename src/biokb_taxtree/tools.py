@@ -15,7 +15,7 @@ from biokb_taxtree.constants import (
 )
 
 
-def download_and_unzip(force_download: bool = False) -> str:
+def download_and_unzip() -> str:
     """Download IPNI data in local download folder, unzipped and return path.
 
     Args:
@@ -25,9 +25,7 @@ def download_and_unzip(force_download: bool = False) -> str:
         str: _description_
     """
     os.makedirs(DATA_FOLDER, exist_ok=True)
-    if force_download or not os.path.exists(PATH_TO_ZIP_FILE):
-        urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
-        logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
+    logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
 
     with zipfile.ZipFile(PATH_TO_ZIP_FILE, "r") as zip_ref:
         os.makedirs(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, exist_ok=True)
