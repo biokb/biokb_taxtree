@@ -66,5 +66,5 @@ class DbManager:
             self.__query = DbQuery(self.engine)
         return self.__query
 
-    def import_data(self, if_db_empty: bool = True):
-        self._importer.import_data(if_db_empty=if_db_empty)
+    def import_data(self, force: bool = False):
+        self._importer.import_data(force=force)

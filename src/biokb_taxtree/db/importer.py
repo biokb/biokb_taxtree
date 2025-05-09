@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import sessionmaker as Sm
 
 from biokb_taxtree.constants import (
+    BIOKB_FOLDER,
     DB_DEFAULT_CONNECTION_STR,
     DEFAULT_PATH_UNZIPPED_DATA_FOLDER,
     NAME_COLUMNS,
@@ -47,8 +48,6 @@ class DbImporter:
     def __init__(
         self,
         engine: Optional[Engine] = None,
-        path_data_folder: Optional[str] = None,
-        force_download: bool = False,
     ):
         """
         Initialize the DbManager with a database engine and path to the data files.
@@ -60,10 +59,9 @@ class DbImporter:
         connection_str = os.getenv("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
         self.engine = engine if engine else create_engine(connection_str)
         self.Session: Sm = sessionmaker(bind=self.engine)
-        self.path_data_folder = path_data_folder
-        self.force_download = force_download
+        self._path_data_folder: Optional[str] = None
 
-    def import_data(self, if_db_empty: bool):
+    def import_data(self, force: bool):
         """Import downloaded data into database.
 
         If only_if_db_empty=True imports data, if at least one table is empty.
@@ -72,13 +70,13 @@ class DbImporter:
             only_if_db_empty (bool, optional): imports if at least one table is empty. Defaults to False.
         """
         # TODO: This process takes to much memory. Should be also possible on weaker machines with only 8Gb of memory
-        if if_db_empty and self.all_tables_have_data:
+        if not force and self.all_tables_have_data:
             logger.info("TaxTree is already imported into the database")
             return
 
         logger.info(f"Start import data with engine {self.engine}")
-        if not self.path_data_folder:
-            self.path_data_folder = download_and_unzip(self.force_download)
+        if not self._path_data_folder:
+            self._path_data_folder = download_and_unzip()
 
         self.recreate_db()
 
@@ -88,7 +86,7 @@ class DbImporter:
         self.import_ranked_lineage()
         self.import_names()
 
-        if self.path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
+        if self._path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
             shutil.rmtree(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
 
         logger.info("Data imported.")
@@ -106,6 +104,7 @@ class DbImporter:
 
     def create_db(self):
         """Create all tables in the database."""
+        os.makedirs(BIOKB_FOLDER, exist_ok=True)
         models.Base.metadata.create_all(self.engine)
 
     def drop_db(self):
