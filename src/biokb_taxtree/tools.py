@@ -3,8 +3,11 @@ import os
 import urllib.request
 import zipfile
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from biokb_taxtree.logger import setup_logging
+
+setup_logging()
+
+logger = logging.getLogger("importer")
 
 
 from biokb_taxtree.constants import (
@@ -25,6 +28,7 @@ def download_and_unzip() -> str:
         str: _description_
     """
     os.makedirs(DATA_FOLDER, exist_ok=True)
+    logger.info("Start downloaded to taxtree")
     urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
     logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
 
