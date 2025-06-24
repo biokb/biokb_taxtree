@@ -117,19 +117,27 @@ class RankedLineage(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    tax_name: Mapped[str] = mapped_column(String(255))
-    species: Mapped[Optional[str]] = mapped_column(String(255))
-    genus: Mapped[Optional[str]] = mapped_column(String(255))
-    family: Mapped[Optional[str]] = mapped_column(String(255))
-    order: Mapped[Optional[str]] = mapped_column(String(255))
-    class_: Mapped[Optional[str]] = mapped_column(String(255))
-    phylum: Mapped[Optional[str]] = mapped_column(String(255))
-    kingdom: Mapped[Optional[str]] = mapped_column(String(255))
-    superkingdom: Mapped[Optional[str]] = mapped_column(String(255))
+    tax_name: Mapped[str] = mapped_column(
+        String(255), comment="scientific name of the organism"
+    )
+    species: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        comment="name of a species (coincide with organism name for species-level nodes)",
+    )
+    genus: Mapped[Optional[str]] = mapped_column(String(255), comment="genus name")
+    family: Mapped[Optional[str]] = mapped_column(String(255), comment="family name")
+    order: Mapped[Optional[str]] = mapped_column(String(255), comment="order name")
+    class_: Mapped[Optional[str]] = mapped_column(String(255), comment="class name")
+    phylum: Mapped[Optional[str]] = mapped_column(String(255), comment="phylum name")
+    kingdom: Mapped[Optional[str]] = mapped_column(String(255), comment="kingdom name")
+    domain: Mapped[Optional[str]] = mapped_column(String(255), comment="domain name")
 
     # foreign keys
     tax_id: Mapped[int] = mapped_column(
-        ForeignKey(Base._prefix + "node.tax_id"), nullable=False, unique=True
+        ForeignKey(Base._prefix + "node.tax_id"),
+        nullable=False,
+        unique=True,
+        comment="node id",
     )
     # one to one relationship
     node: Mapped[Node] = relationship(
@@ -147,7 +155,7 @@ class RankedLineage(Base):
             f"class_={self.class_}, "
             f"phylum={self.phylum}, "
             f"kingdom={self.kingdom}, "
-            f"superkingdom={self.superkingdom})>"
+            f"domain={self.domain})>"
         )
 
 

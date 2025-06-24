@@ -61,7 +61,7 @@ class DbImporter:
         self.Session: Sm = sessionmaker(bind=self.engine)
         self._path_data_folder: Optional[str] = None
 
-    def import_data(self, force: bool):
+    def import_data(self, force: bool) -> dict[str, int | None]:
         """Import downloaded data into database.
 
         If only_if_db_empty=True imports data, if at least one table is empty.
@@ -72,7 +72,7 @@ class DbImporter:
         # TODO: This process takes to much memory. Should be also possible on weaker machines with only 8Gb of memory
         if not force and self.all_tables_have_data:
             logger.info("TaxTree is already imported into the database")
-            return
+            return {}
 
         logger.info(f"Start import data with engine {self.engine}")
         if not self._path_data_folder:
@@ -82,14 +82,16 @@ class DbImporter:
 
         self.activate_foreign_key_check_in_sqlite()
 
-        self.import_nodes()
-        self.import_ranked_lineage()
-        self.import_names()
+        import_rows = {}
+        import_rows.update(self.import_nodes())
+        import_rows.update(self.import_ranked_lineage())
+        import_rows.update(self.import_names())
 
         if self._path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
             shutil.rmtree(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
 
         logger.info("Data imported.")
+        return import_rows
 
     def activate_foreign_key_check_in_sqlite(self):
         """Activate foreign key check in SQLite if engine is SQLite."""
@@ -131,7 +133,7 @@ class DbImporter:
         return all(exists)
 
     def __get_parent_child_dict(self, df_nodes: pd.DataFrame) -> dict[int, list[int]]:
-        """Returns a dictionary of parent_tax_id:child_tax_ids
+        """Returns a dictionary of parent_tax_id:child_tax_ids from the nodes data
 
         Returns:
             dict[int, list[int]]: parent children dictionary
@@ -237,7 +239,7 @@ class DbImporter:
                 else:
                     e.right_tree_id = tree[e.tree_parent_id].right_tree_id
 
-    def import_nodes(self):
+    def import_nodes(self) -> dict[str, int | None]:
         """
         Imports taxonomic nodes data from `names.dmp`, processes it, and stores it in the database.
 
@@ -261,15 +263,20 @@ class DbImporter:
             dtype=NODE_DTYPES,
         )
         df_tree = self.get_tree_df(df)
-        df.set_index("tax_id").join(df_tree).to_sql(
-            models.Node.__tablename__,
-            self.engine,
-            if_exists="append",
-            index=True,
-            chunksize=100000,
+        imported_rows = (
+            df.set_index("tax_id")
+            .join(df_tree)
+            .to_sql(
+                models.Node.__tablename__,
+                self.engine,
+                if_exists="append",
+                index=True,
+                chunksize=100000,
+            )
         )
+        return {models.Node.__tablename__: imported_rows}
 
-    def import_names(self):
+    def import_names(self) -> dict[str, int | None]:
         """
         Imports taxonomic names from `names.dmp` into the database.
 
@@ -293,15 +300,16 @@ class DbImporter:
             engine="python",
         )
         df.name_class = df.name_class.str.rstrip("\t|")
-        df.to_sql(
+        imported_rows = df.to_sql(
             models.Name.__tablename__,
             self.engine,
             if_exists="append",
             index=False,
             chunksize=100000,
         )
+        return {models.Name.__tablename__: imported_rows}
 
-    def import_ranked_lineage(self):
+    def import_ranked_lineage(self) -> dict[str, int | None]:
         """
         Imports ranked lineage data from `rankedlineage.dmp` into the database.
 
@@ -331,12 +339,13 @@ class DbImporter:
             names=RANKED_LINEAGE_COLUMNS,
             index_col=False,
         )
-        df.superkingdom = df.superkingdom.str.rstrip("\t|")
+        df.domain = df.domain.str.rstrip("\t|")
         df.replace({pd.NA: None}, inplace=True)
         df.set_index("tax_id", inplace=True)
-        df.to_sql(
+        imported_rows = df.to_sql(
             models.RankedLineage.__tablename__,
             self.engine,
             if_exists="append",
             chunksize=100000,
         )
+        return {models.RankedLineage.__tablename__: imported_rows}
