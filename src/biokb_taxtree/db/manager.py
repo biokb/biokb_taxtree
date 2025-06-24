@@ -67,4 +67,4 @@ class DbManager:
         return self.__query
 
     def import_data(self, force: bool = False):
-        self._importer.import_data(force=force)
+        return self._importer.import_data(force=force)
