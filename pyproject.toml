@@ -5,7 +5,15 @@ description = "Python package to use NCBI taxonomy in the BioKB/Paean framework"
 authors = [
     {name = "Christian Ebeling", email = "Christian.Ebeling@scai.fraunhofer.de"},
 ]
-dependencies = ["pandas>=2.2.3", "sqlalchemy>=2.0.39", "pymysql>=1.1.1", "cryptography>=44.0.2", "click>=8.1.8"]
+dependencies = [
+    "pandas>=2.2.3",
+    "sqlalchemy>=2.0.39",
+    "pymysql>=1.1.1",
+    "cryptography>=44.0.2",
+    "click>=8.1.8",
+    "pydantic>=2.11.7",
+    "fastapi[standard]>=0.115.13",
+]
 requires-python = ">=3.12"
 readme = "README.md"
 license = {text = "MIT"}
