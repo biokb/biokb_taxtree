@@ -19,17 +19,18 @@ from biokb_taxtree.constants import (
 
 
 def download_and_unzip() -> str:
-    """Download IPNI data in local download folder, unzipped and return path.
+    """Download Taxtree data, unzipped and return path.
 
-    Args:
-        force (bool, optional): Force to download the file. Defaults to False.
-
+    This function downloads the NCBI Taxonomy data from the specified URL,
+    unzips it, and returns the path to the unzipped data folder.
     Returns:
-        str: _description_
+        str: The path to the unzipped data folder.
     """
     os.makedirs(DATA_FOLDER, exist_ok=True)
-    logger.info("Start downloaded to taxtree")
-    urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
+
+    if not os.path.exists(PATH_TO_ZIP_FILE):
+        logger.info("Start downloading")
+        urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
     logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
 
     with zipfile.ZipFile(PATH_TO_ZIP_FILE, "r") as zip_ref:
