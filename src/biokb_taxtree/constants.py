@@ -64,7 +64,7 @@ RANKED_LINEAGE_DTYPES: dict[str, str] = {
     "class_": "string",
     "phylum": "string",
     "kingdom": "string",
-    "superkingdom": "string",
+    "domain": "string",
 }
 
 RANKED_LINEAGE_COLUMNS = list(RANKED_LINEAGE_DTYPES.keys())
