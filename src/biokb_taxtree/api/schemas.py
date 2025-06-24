@@ -2,144 +2,157 @@
 from datetime import date as date_type
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+# -------------------------------------------------------------------
+# Node
+# -------------------------------------------------------------------
+
+
+class NodeBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tax_id: int
+    parent_tax_id: int
+    rank: str
+    embl_code: Optional[str]
+    division_id: int
+    inherited_div_flag: bool
+    genetic_code_id: int
+    inherited_gc_flag: bool
+    mitochondrial_genetic_code_id: int
+    inherited_mgc_flag: bool
+    genbank_hidden_flag: bool
+    hidden_subtree_root_flag: bool
+    comments: Optional[str]
+    plastid_genetic_code_id: Optional[int]
+    inherited_pgc_flag: Optional[bool]
+    specified_species: bool
+    hydrogenosome_genetic_code_id: Optional[int]
+    inherited_hgc_flag: bool
+
+
+class NodeSearch(BaseModel):
+    tax_id: Optional[int] = None
+    parent_tax_id: Optional[int] = None
+    rank: Optional[str] = None
+    embl_code: Optional[str] = None
+    division_id: Optional[int] = None
+    inherited_div_flag: Optional[bool] = None
+    genetic_code_id: Optional[int] = None
+    inherited_gc_flag: Optional[bool] = None
+    mitochondrial_genetic_code_id: Optional[int] = None
+    inherited_mgc_flag: Optional[bool] = None
+    genbank_hidden_flag: Optional[bool] = None
+    hidden_subtree_root_flag: Optional[bool] = None
+    comments: Optional[str] = None
+    plastid_genetic_code_id: Optional[int] = None
+    inherited_pgc_flag: Optional[bool] = None
+    specified_species: Optional[bool] = None
+    hydrogenosome_genetic_code_id: Optional[int] = None
+    inherited_hgc_flag: Optional[bool] = None
+
+
+class Node(NodeBase):
+    model_config = ConfigDict(from_attributes=True)
+    tree_id: int
+    tree_parent_id: Optional[int]
+    level: int
+    right_tree_id: Optional[int]
+    is_leaf: bool
+
+    # relationships
+    names: list["NameBase"]
+    ranked_lineage: Optional["RankedLineageBase"]
+
+
+class NodeSearchResults(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    count: int
+    offset: int
+    limit: int
+    results: List[Node]
+
+
+class NodeSiblingsSearchResults(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    count: int
+    offset: int
+    limit: int
+    results: List[Node]
 
 
 # -------------------------------------------------------------------
-# Name Schemas
+# Name
 # -------------------------------------------------------------------
 class NameBase(BaseModel):
-    """Shared fields for reading and creating Name records."""
-
-    rank: str
-    scientific_name: str
-    authorship: Optional[str] = None
-    status: Optional[str]
-    published_in_year: Optional[int]
-    published_in_page: Optional[int]
-    link: Optional[str]
-    remarks: Optional[str]
-    reference_id: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+    name_txt: str
+    unique_name: Optional[str]
+    name_class: str
 
 
 class Name(NameBase):
-    """Fields returned when reading a Name record from the DB."""
-
     model_config = ConfigDict(from_attributes=True)
-
-    id: str
-
-
-# -------------------------------------------------------------------
-# Name Detail
-# -------------------------------------------------------------------
-class NameDetail(BaseModel):
-    """
-    A custom schema to return extended metadata for a given name ID,
-    including scientific name, reference title, family name, and
-    collector/locality from TypeMaterial.
-    """
-
-    name_id: str
-    scientific_name: str
-    reference_title: Optional[str] = None
-    family_name: Optional[str] = None
-    collector: Optional[str] = None
-    locality: Optional[str] = None
+    tax_id: int
 
 
-# -------------------------------------------------------------------
-# Reference Schemas
-# -------------------------------------------------------------------
-class ReferenceBase(BaseModel):
-    doi: Optional[str] = None
-    alternative_id: Optional[str] = None
-    citation: Optional[str] = None
-    title: str
-    author: Optional[str] = None
-    issued: Optional[str] = None
-    volume: Optional[str] = None
-    issue: Optional[str] = None
-    page: Optional[str] = None
-    issn: Optional[str] = None
-    isbn: Optional[str] = None
-    link: Optional[str] = None
-    remarks: Optional[str] = None
+class NameSearch(BaseModel):
+    name_txt: Optional[str] = Field(
+        None, examples=["Homo sapiens"], description="Textual name for searching"
+    )
+    unique_name: Optional[str] = Field(
+        None, examples=["Homo_sapiens"], description="Unique identifier name"
+    )
+    name_class: Optional[str] = Field(
+        None,
+        examples=["species"],
+        description="Classification level (e.g., genus, species)",
+    )
+    tax_id: Optional[int] = Field(
+        None, examples=[9606], description="Taxonomic identifier (NCBI Taxon ID)"
+    )
 
 
-class ReferenceCreate(ReferenceBase):
-    id: str
-
-
-class Reference(ReferenceBase):
+class NameSearchResults(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
-    id: str
+    count: int
+    offset: int
+    limit: int
+    results: List[NameBase]
 
 
 # -------------------------------------------------------------------
-# Taxon Schemas
+# RankedLineage
 # -------------------------------------------------------------------
-class TaxonBase(BaseModel):
-    provisional: bool
-    status: Optional[str] = None
-    family: str
-    link: Optional[str] = None
-    name_id: Optional[str] = None
+class RankedLineageBase(BaseModel):
+    tax_id: int
+    tax_name: str
+    species: Optional[str]
+    genus: Optional[str]
+    family: Optional[str]
+    order: Optional[str]
+    class_: Optional[str]
+    phylum: Optional[str]
+    kingdom: Optional[str]
+    domain: Optional[str]
 
 
-class TaxonCreate(TaxonBase):
-    id: str
+class RankedLineageSearch(BaseModel):
+    tax_id: Optional[int] = None
+    tax_name: Optional[str] = None
+    species: Optional[str] = None
+    genus: Optional[str] = None
+    family: Optional[str] = None
+    order: Optional[str] = None
+    class_: Optional[str] = None
+    phylum: Optional[str] = None
+    kingdom: Optional[str] = None
+    domain: Optional[str] = None
 
 
-class Taxon(TaxonBase):
+class RankedLineageSearchResults(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
-    id: str
-
-
-# -------------------------------------------------------------------
-# NameRelation Schemas
-# -------------------------------------------------------------------
-class NameRelationBase(BaseModel):
-
-    type: str
-    related_name_id: Optional[str] = None
-    name_id: Optional[str] = None
-
-
-class NameRelationCreate(NameRelationBase):
-    pass
-
-
-class NameRelation(NameRelationBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-
-
-# -------------------------------------------------------------------
-# TypeMaterial Schemas
-# -------------------------------------------------------------------
-class TypeMaterialBase(BaseModel):
-    citation: Optional[str] = None
-    status: Optional[str] = None
-    institution_code: Optional[str] = None
-    catalog_number: Optional[str] = None
-    collector: Optional[str] = None
-    date: Optional[date_type] = None
-    locality: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    remarks: Optional[str] = None
-    name_id: str
-
-
-class TypeMaterialCreate(TypeMaterialBase):
-    pass
-
-
-class TypeMaterial(TypeMaterialBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
+    count: int
+    offset: int
+    limit: int
+    results: List[RankedLineageBase]
