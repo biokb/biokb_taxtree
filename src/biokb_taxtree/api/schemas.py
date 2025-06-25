@@ -118,7 +118,7 @@ class NameSearchResults(BaseModel):
     count: int
     offset: int
     limit: int
-    results: List[NameBase]
+    results: List[Name]
 
 
 # -------------------------------------------------------------------
