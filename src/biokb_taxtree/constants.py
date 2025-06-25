@@ -1,6 +1,7 @@
 """Basic constants."""
 
 import os
+from collections import defaultdict
 from enum import StrEnum
 from pathlib import Path
 
@@ -23,26 +24,29 @@ class DmpFileName(StrEnum):
     RANKED_LINEAGE = "rankedlineage.dmp"
 
 
-NODE_DTYPES: dict[str, str] = {
-    "tax_id": "int64",
-    "parent_tax_id": "int64",
-    "rank": "string",
-    "embl_code": "string",
-    "division_id": "int64",
-    "inherited_div_flag": "bool",
-    "genetic_code_id": "int64",
-    "inherited_gc_flag": "bool",
-    "mitochondrial_genetic_code_id": "int64",
-    "inherited_mgc_flag": "bool",
-    "genbank_hidden_flag": "bool",
-    "hidden_subtree_root_flag": "bool",
-    "comments": "string",
-    "plastid_genetic_code_id": "Int64",
-    "inherited_pgc_flag": "boolean",
-    "specified_species": "bool",
-    "hydrogenosome_genetic_code_id": "Int64",
-    "inherited_hgc_flag": "bool",
-}
+NODE_DTYPES: defaultdict[str, str] = defaultdict(
+    str,
+    {
+        "tax_id": "int64",
+        "parent_tax_id": "int64",
+        "rank": "string",
+        "embl_code": "string",
+        "division_id": "int64",
+        "inherited_div_flag": "bool",
+        "genetic_code_id": "int64",
+        "inherited_gc_flag": "bool",
+        "mitochondrial_genetic_code_id": "int64",
+        "inherited_mgc_flag": "bool",
+        "genbank_hidden_flag": "bool",
+        "hidden_subtree_root_flag": "bool",
+        "comments": "string",
+        "plastid_genetic_code_id": "Int64",
+        "inherited_pgc_flag": "boolean",
+        "specified_species": "bool",
+        "hydrogenosome_genetic_code_id": "Int64",
+        "inherited_hgc_flag": "bool",
+    },
+)
 
 NODE_COLUMNS = list(NODE_DTYPES.keys())
 
@@ -54,17 +58,20 @@ NAME_DTYPES: dict[str, str] = {
 }
 NAME_COLUMNS = list(NAME_DTYPES.keys())
 
-RANKED_LINEAGE_DTYPES: dict[str, str] = {
-    "tax_id": "int32",
-    "tax_name": "string",
-    "species": "string",
-    "genus": "string",
-    "family": "string",
-    "order": "string",
-    "class_": "string",
-    "phylum": "string",
-    "kingdom": "string",
-    "domain": "string",
-}
+RANKED_LINEAGE_DTYPES: defaultdict[str, str] = defaultdict(
+    str,
+    {
+        "tax_id": "int32",
+        "tax_name": "string",
+        "species": "string",
+        "genus": "string",
+        "family": "string",
+        "order": "string",
+        "class_": "string",
+        "phylum": "string",
+        "kingdom": "string",
+        "domain": "string",
+    },
+)
 
 RANKED_LINEAGE_COLUMNS = list(RANKED_LINEAGE_DTYPES.keys())

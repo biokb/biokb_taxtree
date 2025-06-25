@@ -4,7 +4,6 @@
 
 ```bash
 podman-compose up -d mysql pma
-logger.info("Start downloaded to taxtree")
 export CONNECTION_STR="mysql+pymysql://biokb_user:biokb_passwd@localhost:3307/biokb"
 fastapi run src/biokb_taxtree/api/main.py --reload
 ```

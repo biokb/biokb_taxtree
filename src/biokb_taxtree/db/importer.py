@@ -251,7 +251,6 @@ class DbImporter:
             FileNotFoundError: If the specified file does not exist.
             ValueError: If the file format is invalid or does not match the expected structure.
         """
-
         logger.info(f"Start import nodes")
         path = os.path.join(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.NODE)
         df = pd.read_csv(
