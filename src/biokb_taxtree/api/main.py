@@ -227,10 +227,6 @@ async def search_nodes(
 ):
     """
     Search nodes.
-
-    The request body schema examples are defined in `schemas.NodeSearch.model_config['examples']`
-    but FastAPI does not show examples for dependencies (i.e., when using Depends).
-    To show examples in the docs, you must use Body(...) instead of Depends.
     """
     return build_dynamic_query(
         search_obj=search,
