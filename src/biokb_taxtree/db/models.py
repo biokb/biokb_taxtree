@@ -63,11 +63,17 @@ class Node(Base):
     inherited_hgc_flag: Mapped[bool] = mapped_column(
         comment="1 if node inherits hydrogenosome gencode from parent"
     )
-    tree_id: Mapped[int] = mapped_column(comment="Sorted tree ID")
-    tree_parent_id: Mapped[Optional[int]] = mapped_column(comment="Sorted tree ID")
+    tree_id: Mapped[int] = mapped_column(comment="Sorted tree ID", index=True)
+    tree_parent_id: Mapped[Optional[int]] = mapped_column(
+        comment="Sorted tree ID", index=True
+    )
     level: Mapped[int] = mapped_column(comment="Level in the tree")
-    right_tree_id: Mapped[Optional[int]] = mapped_column(comment="Level in the tree")
-    is_leaf: Mapped[bool] = mapped_column(comment="Is leaf (has no children)")
+    right_tree_id: Mapped[Optional[int]] = mapped_column(
+        comment="Level in the tree", index=True
+    )
+    is_leaf: Mapped[bool] = mapped_column(
+        comment="Is leaf (has no children)", index=True
+    )
 
     # relationships
     names: Mapped[list["Name"]] = relationship(back_populates="node")
