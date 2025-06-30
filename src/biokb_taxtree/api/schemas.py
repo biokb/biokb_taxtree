@@ -1,6 +1,7 @@
 # schemas.py
 from datetime import date as date_type
 from typing import List, Optional
+from unittest.mock import Base
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -73,12 +74,19 @@ class NodeSearchResults(BaseModel):
     results: List[Node]
 
 
+class NodeSiblingsSearchResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tax_id: int
+    parent_tax_id: int
+    scientific_name: str
+
+
 class NodeSiblingsSearchResults(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     count: int
     offset: int
     limit: int
-    results: List[Node]
+    results: List[NodeSiblingsSearchResult]
 
 
 # -------------------------------------------------------------------
