@@ -259,7 +259,18 @@ async def search_siblings_nodes(
     )
 
     # Main query to get all nodes with that parent_tax_id
-    query = session.query(models.Node).filter(models.Node.parent_tax_id == subquery)
+    query = (
+        session.query(
+            models.Node.tax_id,
+            models.Node.parent_tax_id,
+            models.Name.name_txt.label("scientific_name"),
+        )
+        .join(models.Name)
+        .filter(
+            models.Node.parent_tax_id == subquery,
+            models.Name.name_class == "scientific name",
+        )
+    )
 
     return {
         "count": query.count(),
@@ -270,18 +281,21 @@ async def search_siblings_nodes(
 
 
 @app.get(
-    "/node/search/leafs_of/{tax_id}",
+    "/node/search/descendent/{tax_id}",
     response_model=schemas.NodeSiblingsSearchResults,
     tags=[Tag.NODE],
 )
-async def search_leaf_nodes(
+async def search_descendent_nodes(
     tax_id: int,
     only_leafs: bool = True,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
-    """Search all leaf nodes that are descendants of the node with the given tax_id."""
+    """Search all nodes that are descendants of the node with the given tax_id.
+
+    Set `only_leafs` to `True` to only return leaf nodes (nodes without children).
+    """
     subquery = (
         select(models.Node.tree_id, models.Node.right_tree_id)
         .where(models.Node.tax_id == tax_id)
@@ -293,17 +307,27 @@ async def search_leaf_nodes(
     b = subquery.c  # column access in subquery
 
     # Main query with join condition
-    query = session.query(a).join(
-        subquery, and_(a.tree_id >= b.tree_id, a.tree_id <= b.right_tree_id)
+    query = (
+        select(
+            models.Node.tax_id,
+            models.Node.parent_tax_id,
+            models.Name.name_txt.label("scientific_name"),
+        )
+        .select_from(a)
+        .join(subquery, and_(a.tree_id >= b.tree_id, a.tree_id < b.right_tree_id))
+        .join(models.Name, models.Name.tax_id == a.tax_id)
+        .where(models.Name.name_class == "scientific name")
     )
     if only_leafs:
-        query = query.filter(a.is_leaf == True)
+        query = query.where(a.is_leaf == True)
+
+    query_count = select(func.count()).select_from(query.subquery())
 
     return {
-        "count": query.count(),
+        "count": session.execute(query_count).scalar_one(),
         "limit": limit,
         "offset": offset,
-        "results": query.limit(limit).offset(offset).all(),
+        "results": session.execute(query.limit(limit).offset(offset)).all(),
     }
 
 
