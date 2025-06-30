@@ -201,7 +201,7 @@ async def import_data(
 async def search_names(
     search: schemas.NameSearch = Depends(),
     offset: int = 0,
-    limit: Annotated[int, Query(le=10)] = 3,
+    limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
     return build_dynamic_query(
@@ -222,7 +222,7 @@ async def search_names(
 async def search_nodes(
     search: schemas.NodeSearch = Depends(),
     offset: int = 0,
-    limit: Annotated[int, Query(le=10)] = 3,
+    limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
     """
@@ -245,7 +245,7 @@ async def search_nodes(
 async def search_siblings_nodes(
     tax_id: int,
     offset: int = 0,
-    limit: Annotated[int, Query(le=10)] = 3,
+    limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
     """Search all nodes that have the same parent as the node with the given tax_id.
@@ -278,7 +278,7 @@ async def search_leaf_nodes(
     tax_id: int,
     only_leafs: bool = True,
     offset: int = 0,
-    limit: Annotated[int, Query(le=10)] = 3,
+    limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
     """Search all leaf nodes that are descendants of the node with the given tax_id."""
@@ -320,7 +320,7 @@ async def search_leaf_nodes(
 async def search_ranked_lineage(
     search: schemas.RankedLineageSearch = Depends(),
     offset: int = 0,
-    limit: Annotated[int, Query(le=10)] = 3,
+    limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
 ):
     return build_dynamic_query(
