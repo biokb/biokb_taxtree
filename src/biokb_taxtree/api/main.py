@@ -287,7 +287,7 @@ async def search_siblings_nodes(
 )
 async def search_descendent_nodes(
     tax_id: int,
-    only_leafs: bool = True,
+    only_leafs: bool = False,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 10,
     session: Session = Depends(get_db),
