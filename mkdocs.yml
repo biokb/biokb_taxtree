@@ -1,3 +1,6 @@
 site_name: BioKb TaxTree
 theme:
   name: material
+  palette:
+    scheme: slate
+
