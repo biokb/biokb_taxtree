@@ -60,6 +60,8 @@ class DbImporter:
         self.engine = engine if engine else create_engine(connection_str)
         self.Session: Sm = sessionmaker(bind=self.engine)
         self._path_data_folder: Optional[str] = None
+        self._path_zip_file: Optional[str] = None
+        self._path_unzipped_data_folder: Optional[str] = None
 
     def import_data(self, force: bool) -> dict[str, int | None]:
         """Import downloaded data into database.
@@ -75,8 +77,13 @@ class DbImporter:
             return {}
 
         logger.info(f"Start import data with engine {self.engine}")
+
+        if not self._path_unzipped_data_folder:
+            self._path_unzipped_data_folder = DEFAULT_PATH_UNZIPPED_DATA_FOLDER
+
         if not self._path_data_folder:
-            self._path_data_folder = download_and_unzip()
+            self._path_data_folder = download_and_unzip(path_zip_file=self._path_zip_file, path_unzip_folder=self._path_unzipped_data_folder)
+
 
         self.recreate_db()
 
@@ -87,8 +94,8 @@ class DbImporter:
         import_rows.update(self.import_ranked_lineage())
         import_rows.update(self.import_names())
 
-        if self._path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
-            shutil.rmtree(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
+        #if self._path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
+        #    shutil.rmtree(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
 
         logger.info("Data imported.")
         return import_rows

@@ -18,7 +18,7 @@ from biokb_taxtree.constants import (
 )
 
 
-def download_and_unzip() -> str:
+def download_and_unzip(path_zip_file=PATH_TO_ZIP_FILE, path_unzip_folder=DEFAULT_PATH_UNZIPPED_DATA_FOLDER) -> str:
     """Download Taxtree data, unzipped and return path.
 
     This function downloads the NCBI Taxonomy data from the specified URL,
@@ -28,14 +28,20 @@ def download_and_unzip() -> str:
     """
     os.makedirs(DATA_FOLDER, exist_ok=True)
 
-    if not os.path.exists(PATH_TO_ZIP_FILE):
+    if not path_zip_file:
+        path_zip_file = PATH_TO_ZIP_FILE
+
+    if not path_unzip_folder:
+        path_unzip_folder = DEFAULT_PATH_UNZIPPED_DATA_FOLDER
+
+    if not os.path.exists(path_zip_file):
         logger.info("Start downloading")
-        urllib.request.urlretrieve(DOWNLOAD_URL, PATH_TO_ZIP_FILE)
-    logger.info(f"{DOWNLOAD_URL} downloaded to {PATH_TO_ZIP_FILE}")
+        urllib.request.urlretrieve(DOWNLOAD_URL, path_zip_file)
+    logger.info(f"{DOWNLOAD_URL} downloaded to {path_zip_file}")
 
-    with zipfile.ZipFile(PATH_TO_ZIP_FILE, "r") as zip_ref:
-        os.makedirs(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, exist_ok=True)
-        zip_ref.extractall(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
-        logger.info(f"Unzip fies to {DEFAULT_PATH_UNZIPPED_DATA_FOLDER}")
+    with zipfile.ZipFile(path_zip_file, "r") as zip_ref:
+        os.makedirs(path_unzip_folder, exist_ok=True)
+        zip_ref.extractall(path_unzip_folder)
+        logger.info(f"Unzip fies to {path_unzip_folder}")
 
-    return DEFAULT_PATH_UNZIPPED_DATA_FOLDER
+    return path_unzip_folder
