@@ -63,6 +63,14 @@ class DbImporter:
         self._path_zip_file: Optional[str] = None
         self._path_unzipped_data_folder: Optional[str] = None
 
+    def set_path_zip_file(self, path_zip_file=None):
+        self._path_zip_file = path_zip_file
+        return self._path_zip_file
+
+    def set_path_unziped_data_folder(self, path_unzipped_data_folder=None):
+        self._path_unzipped_data_folder = path_unzipped_data_folder
+        return self._path_unzipped_data_folder
+
     def import_data(self, force: bool) -> dict[str, int | None]:
         """Import downloaded data into database.
 
@@ -78,11 +86,16 @@ class DbImporter:
 
         logger.info(f"Start import data with engine {self.engine}")
 
+        print("Unzipped Data Folder:", self._path_unzipped_data_folder)
         if not self._path_unzipped_data_folder:
             self._path_unzipped_data_folder = DEFAULT_PATH_UNZIPPED_DATA_FOLDER
 
+        print("Unzipped Data Folder:", self._path_unzipped_data_folder)
+
+        # Uncommented because previously in tests with a manually defined data folder, it would always skip this and not unzip and import the test data
         if not self._path_data_folder:
             self._path_data_folder = download_and_unzip(path_zip_file=self._path_zip_file, path_unzip_folder=self._path_unzipped_data_folder)
+        print("Final Data Folder:", self._path_data_folder)
 
 
         self.recreate_db()
@@ -151,6 +164,7 @@ class DbImporter:
             .apply(list)
             .to_dict()
         )
+        # Remove the tax ID 1 as its own child/parent (causes problems in the database)
         pc_dict[1].remove(1)
         return pc_dict
 
@@ -259,7 +273,9 @@ class DbImporter:
             ValueError: If the file format is invalid or does not match the expected structure.
         """
         logger.info(f"Start import nodes")
-        path = os.path.join(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.NODE)
+        path = os.path.join(self._path_unzipped_data_folder, DmpFileName.NODE)
+        logger.info(f"Start import nodes from path {path}")
+
         df = pd.read_csv(
             path,
             sep=r"\t\|\t",
@@ -297,7 +313,7 @@ class DbImporter:
         """
 
         logger.info(f"Start import names")
-        path = os.path.join(DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.NAME)
+        path = os.path.join(self._path_unzipped_data_folder, DmpFileName.NAME)
         df = pd.read_csv(
             path,
             sep=r"\t\|\t",
@@ -334,7 +350,7 @@ class DbImporter:
 
         logger.info(f"Start import ranked lineage")
         file_path = os.path.join(
-            DEFAULT_PATH_UNZIPPED_DATA_FOLDER, DmpFileName.RANKED_LINEAGE
+            self._path_unzipped_data_folder, DmpFileName.RANKED_LINEAGE
         )
         df = pd.read_csv(
             file_path,
