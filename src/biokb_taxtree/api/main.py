@@ -1,4 +1,3 @@
-# main.py
 import logging
 import os
 import secrets
@@ -12,9 +11,6 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from sqlalchemy import and_, create_engine, func, select
 from sqlalchemy.orm import Session
-
-# from database import SessionLocal
-from sqlalchemy.sql import text
 
 from biokb_taxtree.api import schemas
 from biokb_taxtree.api.tags import Tag
