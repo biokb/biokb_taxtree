@@ -37,11 +37,11 @@ def download_and_unzip(path_zip_file=PATH_TO_ZIP_FILE, path_unzip_folder=DEFAULT
     if not os.path.exists(path_zip_file):
         logger.info("Start downloading")
         urllib.request.urlretrieve(DOWNLOAD_URL, path_zip_file)
-    logger.info(f"{DOWNLOAD_URL} downloaded to {path_zip_file}")
+        logger.info(f"{DOWNLOAD_URL} downloaded to {path_zip_file}")
 
     with zipfile.ZipFile(path_zip_file, "r") as zip_ref:
         os.makedirs(path_unzip_folder, exist_ok=True)
         zip_ref.extractall(path_unzip_folder)
-        logger.info(f"Unzip fies to {path_unzip_folder}")
+        logger.info(f"Unzip files to {path_unzip_folder}")
 
     return path_unzip_folder
