@@ -1,6 +1,7 @@
 import logging
 import os
-import shutil
+import urllib.request
+import zipfile
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass
 from typing import Optional
@@ -12,18 +13,19 @@ from sqlalchemy.orm.session import sessionmaker as Sm
 
 from biokb_taxtree.constants import (
     BIOKB_FOLDER,
+    DATA_FOLDER,
     DB_DEFAULT_CONNECTION_STR,
-    DEFAULT_PATH_UNZIPPED_DATA_FOLDER,
+    DOWNLOAD_URL,
     NAME_COLUMNS,
     NODE_COLUMNS,
     NODE_DTYPES,
+    PATH_TO_ZIP_FILE,
     RANKED_LINEAGE_COLUMNS,
     RANKED_LINEAGE_DTYPES,
     DmpFileName,
 )
 from biokb_taxtree.db import models
 from biokb_taxtree.logger import setup_logging
-from biokb_taxtree.tools import download_and_unzip
 
 setup_logging()
 
@@ -59,98 +61,49 @@ class DbImporter:
         connection_str = os.getenv("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
         self.engine = engine if engine else create_engine(connection_str)
         self.Session: Sm = sessionmaker(bind=self.engine)
-        self._path_data_folder: Optional[str] = None
-        self._path_zip_file: Optional[str] = None
-        self._path_unzipped_data_folder: Optional[str] = None
+        self._path_data_folder: str = DATA_FOLDER
+        self._path_zip_file: str = PATH_TO_ZIP_FILE
 
-    def set_path_zip_file(self, path_zip_file=None):
+    def _set_path_zip_file(self, path_zip_file: str):
+        if not os.path.exists(path_zip_file):
+            raise FileNotFoundError(f"Zip file {path_zip_file} does not exist.")
         self._path_zip_file = path_zip_file
-        return self._path_zip_file
 
-    def set_path_unziped_data_folder(self, path_unzipped_data_folder=None):
-        self._path_unzipped_data_folder = path_unzipped_data_folder
-        return self._path_unzipped_data_folder
-
-    def import_data(self, force: bool) -> dict[str, int | None]:
-        """Import downloaded data into database.
-
-        If only_if_db_empty=True imports data, if at least one table is empty.
-
-        Args:
-            only_if_db_empty (bool, optional): imports if at least one table is empty. Defaults to False.
-        """
-        # TODO: This process takes to much memory. Should be also possible on weaker machines with only 8Gb of memory
-        if not force and self.all_tables_have_data:
-            logger.info("TaxTree is already imported into the database")
-            return {}
-
+    def import_data(self, force_download: bool = False) -> dict[str, int | None]:
         logger.info(f"Start import data with engine {self.engine}")
 
-        print("Unzipped Data Folder:", self._path_unzipped_data_folder)
-        if not self._path_unzipped_data_folder:
-            self._path_unzipped_data_folder = DEFAULT_PATH_UNZIPPED_DATA_FOLDER
-
-        print("Unzipped Data Folder:", self._path_unzipped_data_folder)
-
-        # Uncommented because previously in tests with a manually defined data folder, it would always skip this and not unzip and import the test data
-        if not self._path_data_folder:
-            self._path_data_folder = download_and_unzip(path_zip_file=self._path_zip_file, path_unzip_folder=self._path_unzipped_data_folder)
-        print("Final Data Folder:", self._path_data_folder)
-
+        if force_download or not os.path.exists(self._path_zip_file):
+            logger.info("Start downloading")
+            urllib.request.urlretrieve(DOWNLOAD_URL, self._path_zip_file)
+            logger.info(f"{DOWNLOAD_URL} downloaded to {self._path_zip_file}")
 
         self.recreate_db()
 
-        self.activate_foreign_key_check_in_sqlite()
+        self.__activate_foreign_key_check_in_sqlite()
 
         import_rows = {}
         import_rows.update(self.import_nodes())
         import_rows.update(self.import_ranked_lineage())
         import_rows.update(self.import_names())
 
-        #if self._path_data_folder == DEFAULT_PATH_UNZIPPED_DATA_FOLDER:
-        #    shutil.rmtree(DEFAULT_PATH_UNZIPPED_DATA_FOLDER)
-
         logger.info("Data imported.")
         return import_rows
 
-    def activate_foreign_key_check_in_sqlite(self):
+    def __activate_foreign_key_check_in_sqlite(self):
         """Activate foreign key check in SQLite if engine is SQLite."""
         if self.engine.name == "sqlite":
             with self.Session() as session:
                 session.execute(text("PRAGMA foreign_keys = ON"))
 
-    def deactivate_foreign_key_check_in_sqlite(self):
+    def __deactivate_foreign_key_check_in_sqlite(self):
         if self.engine.name == "sqlite":
             with self.Session() as session:
                 session.execute(text("PRAGMA foreign_keys = OFF"))
 
-    def create_db(self):
-        """Create all tables in the database."""
-        os.makedirs(BIOKB_FOLDER, exist_ok=True)
-        models.Base.metadata.create_all(self.engine)
-
-    def drop_db(self):
-        """Drop all tables from the database."""
-        models.Base.metadata.drop_all(self.engine)
-
     def recreate_db(self):
         """Recreate the database by dropping and creating all tables."""
-        self.drop_db()
-        self.create_db()
-
-    @property
-    def all_tables_have_data(self) -> bool:
-        """Checks if all tables have data
-
-        Returns:
-            bool: True if all tables have data.
-        """
-        self.create_db()  # create tables if not exists
-        with self.Session() as session:
-            exists = []
-            for model in (models.Name, models.Node):
-                exists.append(session.query(model).count())
-        return all(exists)
+        models.Base.metadata.drop_all(self.engine)
+        models.Base.metadata.create_all(self.engine)
 
     def __get_parent_child_dict(self, df_nodes: pd.DataFrame) -> dict[int, list[int]]:
         """Returns a dictionary of parent_tax_id:child_tax_ids from the nodes data
@@ -261,29 +214,23 @@ class DbImporter:
                     e.right_tree_id = tree[e.tree_parent_id].right_tree_id
 
     def import_nodes(self) -> dict[str, int | None]:
-        """
-        Imports taxonomic nodes data from `names.dmp`, processes it, and stores it in the database.
-
-        Reads `names.dmp` containing taxonomic node information, processes the data
-        to generate a tree structure, and inserts the resulting data into the database table associated
-        with the `Node` model.
-
-        Raises:
-            FileNotFoundError: If the specified file does not exist.
-            ValueError: If the file format is invalid or does not match the expected structure.
-        """
+        """Imports taxonomic nodes in the database."""
         logger.info(f"Start import nodes")
-        path = os.path.join(self._path_unzipped_data_folder, DmpFileName.NODE)
-        logger.info(f"Start import nodes from path {path}")
 
-        df = pd.read_csv(
-            path,
-            sep=r"\t\|\t",
-            header=None,
-            names=NODE_COLUMNS,
-            engine="python",
-            dtype=NODE_DTYPES,
-        )
+        with zipfile.ZipFile(PATH_TO_ZIP_FILE) as z:
+            with z.open(DmpFileName.NODE) as f:
+                df = pd.read_csv(
+                    f,
+                    sep=r"\t\|\t|\t\|$",
+                    header=None,
+                    names=NODE_COLUMNS,
+                    dtype=NODE_DTYPES,
+                    true_values=["1"],
+                    false_values=["0"],
+                    engine="python",
+                    usecols=range(len(NODE_COLUMNS)),
+                )
+
         df_tree = self.get_tree_df(df)
         imported_rows = (
             df.set_index("tax_id")
@@ -299,29 +246,19 @@ class DbImporter:
         return {models.Node.__tablename__: imported_rows}
 
     def import_names(self) -> dict[str, int | None]:
-        """
-        Imports taxonomic names from `names.dmp` into the database.
-
-        Reads `names.dmp` containing taxonomic names,
-        processes the data, and inserts it into the database table associated
-        with the `Name` model.
-
-        Raises:
-            FileNotFoundError: If the specified file does not exist.
-            pandas.errors.ParserError: If there is an issue parsing the file.
-            sqlalchemy.exc.SQLAlchemyError: If there is an error during the database operation.
-        """
+        """Imports taxonomic names into the database."""
 
         logger.info(f"Start import names")
-        path = os.path.join(self._path_unzipped_data_folder, DmpFileName.NAME)
-        df = pd.read_csv(
-            path,
-            sep=r"\t\|\t",
-            header=None,
-            names=NAME_COLUMNS,
-            engine="python",
-        )
-        df.name_class = df.name_class.str.rstrip("\t|")
+        with zipfile.ZipFile(PATH_TO_ZIP_FILE) as z:
+            with z.open(DmpFileName.NAME) as f:
+                df = pd.read_csv(
+                    f,
+                    sep=r"\t\|\t|\t\|$",
+                    header=None,
+                    usecols=range(len(NAME_COLUMNS)),
+                    names=NAME_COLUMNS,
+                    engine="python",
+                )
         imported_rows = df.to_sql(
             models.Name.__tablename__,
             self.engine,
@@ -349,18 +286,19 @@ class DbImporter:
         """
 
         logger.info(f"Start import ranked lineage")
-        file_path = os.path.join(
-            self._path_unzipped_data_folder, DmpFileName.RANKED_LINEAGE
-        )
-        df = pd.read_csv(
-            file_path,
-            sep=r"\t\|\t",
-            engine="python",
-            dtype=RANKED_LINEAGE_DTYPES,
-            header=None,
-            names=RANKED_LINEAGE_COLUMNS,
-            index_col=False,
-        )
+        with zipfile.ZipFile(PATH_TO_ZIP_FILE) as z:
+            with z.open(DmpFileName.RANKED_LINEAGE) as f:
+                df = pd.read_csv(
+                    f,
+                    sep=r"\t\|\t|\t\|$",
+                    engine="python",
+                    dtype=RANKED_LINEAGE_DTYPES,
+                    header=None,
+                    names=RANKED_LINEAGE_COLUMNS,
+                    true_values=["1"],
+                    false_values=["0"],
+                    index_col=False,
+                )
         df.domain = df.domain.str.rstrip("\t|")
         df.replace({pd.NA: None}, inplace=True)
         df.set_index("tax_id", inplace=True)

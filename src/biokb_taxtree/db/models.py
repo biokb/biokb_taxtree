@@ -54,13 +54,13 @@ class Node(Base):
     inherited_pgc_flag: Mapped[Optional[bool]] = mapped_column(
         comment="1 if node inherits plastid gencode from parent"
     )
-    specified_species: Mapped[bool] = mapped_column(
+    specified_species: Mapped[Optional[bool]] = mapped_column(
         comment="1 if species in the node's lineage has formal name"
     )
     hydrogenosome_genetic_code_id: Mapped[Optional[int]] = mapped_column(
         comment="GenBank genetic code id"
     )
-    inherited_hgc_flag: Mapped[bool] = mapped_column(
+    inherited_hgc_flag: Mapped[Optional[bool]] = mapped_column(
         comment="1 if node inherits hydrogenosome gencode from parent"
     )
     tree_id: Mapped[int] = mapped_column(comment="Sorted tree ID", index=True)
