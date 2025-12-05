@@ -1,0 +1,29 @@
+# version: "1.0"
+name: biokb_coconut
+
+services:
+
+  api:
+    build: .
+    image: biokb_wcvp_api:latest
+    ports:
+      - 8000:8000
+    environment:
+      MYSQL_CONNECTION_STR: mysql+pymysql://biokb_user:biokb_passwd@biokb_mysql:3306/biokb
+      NEO4J_URI: bolt://neo4j:neo4j_password@biokb_neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: neo4j_password
+    volumes:
+      - ${BIOKB_FOLDER}:/root/.biokb
+    networks:
+      - biokb_network
+        
+networks:
+  biokb_network:
+    external: true
+
+
+
+
+
+
