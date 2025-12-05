@@ -1,5 +1,10 @@
 # BioKb TaxTree
 
+```bash
+podman-compose -f docker-compose.db_neo.yml up -d
+podman-compose up --build -d
+```
+
 ## Test MySQL import
 
 ```bash
