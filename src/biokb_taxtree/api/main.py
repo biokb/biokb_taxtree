@@ -34,9 +34,7 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(HTTPBasic()))
         )
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("api")
 
 # 1) Configure Database
@@ -182,10 +180,10 @@ async def check_status() -> dict:
 @app.get("/import_data/", tags=["Manage"])
 async def import_data(
     session: Session = Depends(get_db),
-    force: bool = False,
+    force_download: bool = False,
     credentials: HTTPBasicCredentials = Depends(verify_credentials),
 ):
-    return DbManager(engine=engine).import_data(force=force)
+    return DbManager(engine=engine).import_data(force_download=force_download)
 
 
 ###############################################################################
