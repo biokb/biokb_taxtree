@@ -1,5 +1,5 @@
 # version: "1.0"
-name: biokb_coconut
+name: biokb_taxtree_api
 
 services:
 
