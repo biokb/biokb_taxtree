@@ -6,7 +6,7 @@ from typing import Optional
 from yaml import safe_load
 
 
-def setup_logging(path: Optional[str] = None, default_level=logging.DEBUG):
+def setup_logging(path: Optional[str] = None, default_level=logging.WARNING):
     """Setup logging configuration
 
     If no path is set, default logger configuration is used.
