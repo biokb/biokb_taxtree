@@ -6,14 +6,14 @@ from typing import Optional
 from yaml import safe_load
 
 
-def setup_logging(path: Optional[str] = None, default_level=logging.WARNING):
+def setup_logging(path: Optional[str] = None, default_level=logging.INFO):
     """Setup logging configuration
 
     If no path is set, default logger configuration is used.
 
     Args:
         path (Optional[str], optional): Path to logging config yaml file. Defaults to None.
-        default_level (_type_, optional): Default logging level. Defaults to logging.WARNING.
+        default_level (_type_, optional): Default logging level. Defaults to logging.INFO.
     """
     if not path:
         path = os.path.join(os.path.dirname(__file__), "logging_config.yaml")
