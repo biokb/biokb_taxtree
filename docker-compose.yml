@@ -5,7 +5,7 @@ services:
 
   api:
     build: .
-    image: biokb_wcvp_api:latest
+    image: biokb_taxtree_api:latest
     ports:
       - 8000:8000
     environment:
