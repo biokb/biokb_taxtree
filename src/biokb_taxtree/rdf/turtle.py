@@ -5,14 +5,13 @@ import os.path
 import shutil
 from typing import Optional
 
-from rdflib import RDF, XSD, Graph, Literal, Namespace, URIRef
+from rdflib import RDF, XSD, Graph, Literal, URIRef
 from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from biokb_taxtree import constants
 from biokb_taxtree.db import models
-from biokb_taxtree.db.manager import DbManager
-from biokb_taxtree.rdf import namespaces
+from biokb_taxtree.rdf import namespaces as ns
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +19,9 @@ logger = logging.getLogger(__name__)
 def get_empty_graph():
     """Return an empty RDFlib.Graph with all needed namespaces"""
     graph = Graph()
-    graph.bind(prefix="n", namespace=namespaces.NODE_NS)
-    graph.bind(prefix="r", namespace=namespaces.RELATION_NS)
-    graph.bind(prefix="t", namespace=namespaces.NCBI_TAXON_NS)
+    graph.bind(prefix="n", namespace=ns.NODE_NS)
+    graph.bind(prefix="r", namespace=ns.RELATION_NS)
+    graph.bind(prefix="t", namespace=ns.NCBI_TAXON_NS)
     graph.bind(prefix="xs", namespace=XSD)
     return graph
 
@@ -46,13 +45,11 @@ class TurtleCreator:
         self.__ttls_folder = constants.TTL_EXPORT_FOLDER
         self.__data_folder = data_folder or constants.DATA_FOLDER
         connection_str = os.getenv(
-            "MYSQL_CONNECTION_STR", constants.DB_DEFAULT_CONNECTION_STR
+            "CONNECTION_STR", constants.DB_DEFAULT_CONNECTION_STR
         )
-        self.engine = engine if engine else create_engine(connection_str)
-        logger.info(f"Using database connection: {self.engine.url}")
-        self.Session = sessionmaker(bind=self.engine)
-
-        self.__engine = DbManager(engine).engine
+        self.__engine = engine if engine else create_engine(connection_str)
+        logger.info(f"Using database connection: {self.__engine.url}")
+        self.Session = sessionmaker(bind=self.__engine)
 
     def create_ttls(self, start_from_tax_ids: list[int] = [1]) -> str:
         """Create all RDF turtle, zip all files and returns the path to the zipped file.
@@ -88,25 +85,25 @@ class TurtleCreator:
                     )
                     taxons = session.execute(stmt).all()
                     for taxon in taxons:
-                        node = URIRef(namespaces.NCBI_TAXON_NS[str(taxon.tax_id)])
+                        node = URIRef(ns.NCBI_TAXON_NS[str(taxon.tax_id)])
                         graph.add(
                             (
                                 node,
                                 RDF.type,
-                                namespaces.NODE_NS.DbNCBITaxTree,
+                                ns.NODE_NS.DbNCBITaxTree,
                             )
                         )
                         graph.add(
                             (
                                 node,
                                 RDF.type,
-                                namespaces.NODE_NS.Taxon,
+                                ns.NODE_NS.Taxon,
                             )
                         )
                         graph.add(
                             (
                                 node,
-                                namespaces.RELATION_NS.scientific_name,
+                                ns.RELATION_NS.scientific_name,
                                 Literal(
                                     taxon.name_txt,
                                     datatype=XSD.string,
@@ -116,7 +113,7 @@ class TurtleCreator:
                         graph.add(
                             (
                                 node,
-                                namespaces.RELATION_NS.rank,
+                                ns.RELATION_NS.rank,
                                 Literal(
                                     taxon.rank,
                                     datatype=XSD.string,
@@ -125,9 +122,9 @@ class TurtleCreator:
                         )
                         graph.add(
                             (
-                                namespaces.NCBI_TAXON_NS[str(taxon.tax_id)],
-                                namespaces.RELATION_NS.HAS_PARENT,
-                                namespaces.NCBI_TAXON_NS[str(int(taxon.parent_tax_id))],
+                                ns.NCBI_TAXON_NS[str(taxon.tax_id)],
+                                ns.RELATION_NS.HAS_PARENT,
+                                ns.NCBI_TAXON_NS[str(int(taxon.parent_tax_id))],
                             )
                         )
                     # Serialize and save the graph
