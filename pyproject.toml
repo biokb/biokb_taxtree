@@ -23,8 +23,8 @@ readme = "README.md"
 license = {text = "MIT"}
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
 
 
 [tool.pdm]
@@ -38,8 +38,7 @@ dev = [
     "podman-compose>=1.3.0",
 ]
 docs = [
-    "eralchemy>=1.5.0",
-    "graphviz>=0.21",
+    "eralchemy[graphviz]>=1.5.0",
     "mkdocs-material>=9.6.9",
 ]
 [project.scripts]
