@@ -35,35 +35,27 @@ class DbManager:
             path_to_file (str): Path to the directory containing TSV files.
         """
         connection_str = os.getenv("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
-        self.engine = engine if engine else create_engine(connection_str)
-        logger.info("Engine %s", self.engine)
-        self.Session: Sm = sessionmaker(bind=self.engine)
+        self.__engine = engine if engine else create_engine(connection_str)
+        logger.info("Engine %s", self.__engine)
+        self.Session: Sm = sessionmaker(bind=self.__engine)
         self.__importer: Optional[DbImporter] = None
         self.__query: Optional[DbQuery] = None
 
-    def create_db(self):
-        """Create all tables in the database."""
-        models.Base.metadata.create_all(self.engine)
-
-    def drop_db(self):
-        """Drop all tables from the database."""
-        models.Base.metadata.drop_all(self.engine)
-
     def recreate_db(self):
         """Recreate the database by dropping and creating all tables."""
-        self.drop_db()
-        self.create_db()
+        models.Base.metadata.create_all(self.__engine)
+        models.Base.metadata.drop_all(self.__engine)
 
     @property
     def _importer(self):
         if not self.__importer:
-            self.__importer = DbImporter(self.engine)
+            self.__importer = DbImporter(self.__engine)
         return self.__importer
 
     @property
     def query(self):
         if not self.__query:
-            self.__query = DbQuery(self.engine)
+            self.__query = DbQuery(self.__engine)
         return self.__query
 
     def set_importer(self, importer=None):
