@@ -51,8 +51,24 @@ class TurtleCreator:
         logger.info(f"Using database connection: {self.__engine.url}")
         self.Session = sessionmaker(bind=self.__engine)
 
-    def create_ttls(self, start_from_tax_ids: list[int] = [1]) -> str:
+    def create_ttls(
+        self,
+        start_from_tax_ids: list[int] = [2157, 2024, 2759, 10239, 12884],
+    ) -> str:
         """Create all RDF turtle, zip all files and returns the path to the zipped file.
+
+        By default it creates 6 files for the following tax ids:
+        - 2157: Archaea
+        - 2024: Bacteria
+        - 2759: Eukaryota
+        - 10239: Viruses
+        - 12884: Cellular organisms
+
+        Not included:
+        - 28384: other sequences
+        - 12908: unclassified sequences
+
+
 
         Returns:
             str: path to zip file
@@ -61,10 +77,9 @@ class TurtleCreator:
         logging.info("Start creating turtle files.")
         self.__create_nodes_ttl(start_from_tax_ids)
         path_to_zip_file: str = self.create_zip_from_all_ttls()
-        logging.info(f"Turtle files zipped in {path_to_zip_file} .")
         return path_to_zip_file
 
-    def __create_nodes_ttl(self, start_from_tax_ids: Optional[list[int]] = None):
+    def __create_nodes_ttl(self, start_from_tax_ids: list[int]):
         """Create the nodes turtle file."""
         no = models.Node
         na = models.Name
