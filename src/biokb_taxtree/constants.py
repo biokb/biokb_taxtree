@@ -16,7 +16,8 @@ TTL_EXPORT_FOLDER = os.path.join(DATA_FOLDER, "ttls")
 
 DOWNLOAD_URL = "https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.zip"
 PATH_TO_ZIP_FILE = os.path.join(DATA_FOLDER, "taxdmp.zip")
-DB_DEFAULT_CONNECTION_STR = "sqlite:///" + os.path.join(BIOKB_FOLDER, "biokb.db")
+SQLITE_PATH = os.path.join(BIOKB_FOLDER, "biokb.db")
+DB_DEFAULT_CONNECTION_STR = "sqlite:///" + SQLITE_PATH
 ZIPPED_TTLS_PATH = os.path.join(DATA_FOLDER, "ttls.zip")
 
 BASIC_NODE_LABEL = "DbNCBITaxTree"
