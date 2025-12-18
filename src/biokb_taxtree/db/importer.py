@@ -69,22 +69,27 @@ class DbImporter:
             raise FileNotFoundError(f"Zip file {path_zip_file} does not exist.")
         self._path_zip_file = path_zip_file
 
-    def import_data(self, force_download: bool = False) -> dict[str, int | None]:
+    def import_data(
+        self, force_download: bool = False, keep_files: bool = False
+    ) -> dict[str, int | None]:
         logger.info(f"Start import data with engine {self.engine}")
 
         if force_download or not os.path.exists(self._path_zip_file):
             logger.info("Start downloading")
             urllib.request.urlretrieve(DOWNLOAD_URL, self._path_zip_file)
-            logger.info(f"{DOWNLOAD_URL} downloaded to {self._path_zip_file}")
 
         self.recreate_db()
 
         self.__activate_foreign_key_check_in_sqlite()
 
         import_rows = {}
-        import_rows.update(self.import_nodes())
-        import_rows.update(self.import_ranked_lineage())
-        import_rows.update(self.import_names())
+        import_rows.update(self.__import_nodes())
+        import_rows.update(self.__import_ranked_lineage())
+        import_rows.update(self.__import_names())
+
+        if not keep_files and os.path.exists(self._path_zip_file):
+            os.remove(self._path_zip_file)
+            logger.info(f"Removed download file")
 
         logger.info("Data imported.")
         return import_rows
@@ -94,11 +99,6 @@ class DbImporter:
         if self.engine.name == "sqlite":
             with self.Session() as session:
                 session.execute(text("PRAGMA foreign_keys = ON"))
-
-    def __deactivate_foreign_key_check_in_sqlite(self):
-        if self.engine.name == "sqlite":
-            with self.Session() as session:
-                session.execute(text("PRAGMA foreign_keys = OFF"))
 
     def recreate_db(self):
         """Recreate the database by dropping and creating all tables."""
@@ -151,7 +151,7 @@ class DbImporter:
             )
         return tree, tree_id
 
-    def get_tree_df(self, df_nodes: pd.DataFrame) -> pd.DataFrame:
+    def __get_tree_df(self, df_nodes: pd.DataFrame) -> pd.DataFrame:
         """Get taxonomy tree as DataFrame
 
         Args:
@@ -166,11 +166,11 @@ class DbImporter:
         )
         tree, number_of_nodes = self.__get_tree(root, pc_dict)
 
-        self.set_right_tree_ids(tree)
+        self.__set_right_tree_ids(tree)
 
         return pd.DataFrame(list(tree.values())).set_index("tax_id")
 
-    def set_right_tree_ids(self, tree: dict[int, TreeEntry]):
+    def __set_right_tree_ids(self, tree: dict[int, TreeEntry]):
         """
         Assigns the `right_tree_id` attribute for each entry in the tree.
 
@@ -213,7 +213,7 @@ class DbImporter:
                 else:
                     e.right_tree_id = tree[e.tree_parent_id].right_tree_id
 
-    def import_nodes(self) -> dict[str, int | None]:
+    def __import_nodes(self) -> dict[str, int | None]:
         """Imports taxonomic nodes in the database."""
         logger.info(f"Start import nodes")
 
@@ -231,7 +231,7 @@ class DbImporter:
                     usecols=range(len(NODE_COLUMNS)),
                 )
 
-        df_tree = self.get_tree_df(df)
+        df_tree = self.__get_tree_df(df)
         imported_rows = (
             df.set_index("tax_id")
             .join(df_tree)
@@ -245,7 +245,7 @@ class DbImporter:
         )
         return {models.Node.__tablename__: imported_rows}
 
-    def import_names(self) -> dict[str, int | None]:
+    def __import_names(self) -> dict[str, int | None]:
         """Imports taxonomic names into the database."""
 
         logger.info(f"Start import names")
@@ -268,7 +268,7 @@ class DbImporter:
         )
         return {models.Name.__tablename__: imported_rows}
 
-    def import_ranked_lineage(self) -> dict[str, int | None]:
+    def __import_ranked_lineage(self) -> dict[str, int | None]:
         """
         Imports ranked lineage data from `rankedlineage.dmp` into the database.
 
