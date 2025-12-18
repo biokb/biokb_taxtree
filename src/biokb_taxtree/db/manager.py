@@ -61,5 +61,7 @@ class DbManager:
     def set_importer(self, importer=None):
         self.__importer = importer
 
-    def import_data(self, force_download: bool = False):
-        return self._importer.import_data(force_download=force_download)
+    def import_data(self, force_download: bool = False, keep_files: bool = False):
+        return self._importer.import_data(
+            force_download=force_download, keep_files=keep_files
+        )
