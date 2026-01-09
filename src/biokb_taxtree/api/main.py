@@ -1,26 +1,53 @@
 import logging
 import os
+import re
 import secrets
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Annotated, Optional, Union, get_args, get_origin
+from contextlib import asynccontextmanager
+from typing import Annotated, AsyncGenerator, Generator
 
-from fastapi import Body, Depends, FastAPI, HTTPException, Query, status
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from pydantic import BaseModel
-from sqlalchemy import and_, create_engine, func, select
+from sqlalchemy import Engine, and_, create_engine, func, select
 from sqlalchemy.orm import Session
 
 from biokb_taxtree.api import schemas
+from biokb_taxtree.api.query_tools import SASearchResults, build_dynamic_query
 from biokb_taxtree.api.tags import Tag
-from biokb_taxtree.constants import DB_DEFAULT_CONNECTION_STR
-from biokb_taxtree.db import models
+from biokb_taxtree.constants import (
+    DB_DEFAULT_CONNECTION_STR,
+    NEO4J_PASSWORD,
+    NEO4J_URI,
+    NEO4J_USER,
+    ZIPPED_TTLS_PATH,
+)
+from biokb_taxtree.db import manager, models
 from biokb_taxtree.db.manager import DbManager
+from biokb_taxtree.rdf.neo4j_importer import Neo4jImporter
+from biokb_taxtree.rdf.turtle import TurtleCreator
 
-# TODO: Change method to check the user and password
+logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("api")
+
 USERNAME = os.environ.get("API_USERNAME", "admin")
 PASSWORD = os.environ.get("API_PASSWORD", "admin")
+
+
+def get_engine() -> Engine:
+    conn_url = os.environ.get("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
+    engine: Engine = create_engine(conn_url)
+    return engine
+
+
+def get_session() -> Generator[Session, None, None]:
+    engine: Engine = get_engine()
+    session = Session(bind=engine)
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(HTTPBasic())):
@@ -34,22 +61,14 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(HTTPBasic()))
         )
 
 
-logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-logger = logging.getLogger("api")
-
-# 1) Configure Database
-SQLALCHEMY_DATABASE_URL = os.getenv("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
-
-def get_db():
-    dbm = DbManager(engine=engine)
-    session = dbm.Session()
-    try:
-        yield session
-    finally:
-        session.close()
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Initialize app resources on startup and cleanup on shutdown."""
+    engine = get_engine()
+    manager.DbManager(engine)
+    yield
+    # Clean up resources if needed
+    pass
 
 
 # 3) Create FastAPI App
@@ -57,6 +76,7 @@ app = FastAPI(
     title="NCBI TaxTree Data API",
     description="RestfulAPI for NCBI TaxTree-based data. <br><br>Reference: https://www.ncbi.nlm.nih.gov/Taxonomy/",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -68,122 +88,128 @@ app.add_middleware(
 )
 
 
-def build_dynamic_query(
-    search_obj: BaseModel,
-    model_cls,
-    db: Session,
-    limit: Optional[int] = None,  # default limit for pagination
-    offset: Optional[int] = None,  # default offset for pagination
-):
-    try:
-        return _build_dynamic_query(
-            search_obj=search_obj,
-            model_cls=model_cls,
-            db=db,
-            limit=limit,
-            offset=offset,
-        )
-    except Exception as e:
-        logger.error(f"Error in node search: {e}")
-        return {"error": str(e)}
-
-
-def _build_dynamic_query(
-    search_obj: BaseModel,
-    model_cls,
-    db: Session,
-    limit: Optional[int] = None,  # default limit for pagination
-    offset: Optional[int] = None,  # default offset for pagination
-):
-    """
-    Build and execute a SQLAlchemy 2.0-style SELECT based on the non-None
-    attributes of a Pydantic model instance.  The operator is inferred from
-    each field's *declared* type, not the runtime value.
-    """
-    filters = []
-
-    # Only the attributes the client actually supplied (`exclude_none`)
-    payload = search_obj.model_dump(exclude_none=True)
-
-    for field_name, value in payload.items():
-
-        # Skip if the SQLAlchemy model has no matching column / hybrid attr
-        if not hasattr(model_cls, field_name):
-            continue
-        column = getattr(model_cls, field_name)
-
-        # ↓ The type you wrote in the Pydantic model definition
-        declared_type = search_obj.__pydantic_fields__[field_name].annotation
-        # Handle Optional types (e.g., Optional[str] or Union[str, None])
-        if get_origin(declared_type) is Union:
-            args = [arg for arg in get_args(declared_type) if arg is not type(None)]
-            if args:
-                declared_type = args[0]
-        origin = get_origin(declared_type) or declared_type
-
-        # STRING ......................................................................
-        if origin is str:
-            logger.info("used string filter")
-            filters.append(column.like(value) if ("%" in value) else column == value)
-
-        # NUMBERS .....................................................................
-        elif origin in (int, float, Decimal):
-            filters.append(column == value)
-
-        # BOOLEANS ....................................................................
-        elif origin is bool:
-            filters.append(column.is_(value))
-
-        # DATE / DATETIME – supports equality or simple closed range ...................
-        elif origin in (date, datetime):
-            if isinstance(value, (list, tuple)) and len(value) == 2:
-                filters.append(column.between(value[0], value[1]))
-            else:
-                filters.append(column == value)
-
-        # FALLBACK .....................................................................
-        else:
-            logger.warning(
-                f"Unsupported type for field '{field_name}': {declared_type}. "
-                "Using equality operator as fallback."
-            )
-            filters.append(column == value)
-
-    stmt = select(model_cls).where(*filters)
-
-    count_stmt = select(func.count()).select_from(model_cls).where(*filters)
-    total_count = db.execute(count_stmt).scalar()
-
-    if limit is not None:
-        stmt = stmt.limit(limit)
-    if offset is not None:
-        stmt = stmt.offset(offset)
-
-    logger.info(stmt.compile(compile_kwargs={"literal_binds": True}))
-
-    return {
-        "count": total_count,
-        "limit": limit,
-        "offset": offset,
-        "results": db.execute(stmt).scalars().all(),
-    }
+def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+    uvicorn.run(
+        app="biokb_taxtree.api.main:app",
+        host=host,
+        port=port,
+        log_level="warning",
+    )
 
 
 ###############################################################################
 # Manage
 ###############################################################################
-@app.get("/", tags=["Manage"])
-async def check_status() -> dict:
-    return {"msg": "Running!"}
-
-
-@app.get("/import_data/", tags=["Manage"])
+@app.post(
+    path="/import_data/",
+    response_model=dict[str, int],
+    tags=[Tag.DB_MANAGE],
+)
 async def import_data(
-    session: Session = Depends(get_db),
-    force_download: bool = False,
     credentials: HTTPBasicCredentials = Depends(verify_credentials),
-):
-    return DbManager(engine=engine).import_data(force_download=force_download)
+    force_download: bool = Query(
+        False,
+        description=(
+            "Whether to re-download data files even if they already exist,"
+            " ensuring the newest version."
+        ),
+    ),
+    keep_files: bool = Query(
+        True,
+        description=(
+            "Whether to keep the downloaded files"
+            " after importing them into the database."
+        ),
+    ),
+) -> dict[str, int]:
+    """Download data (if not exists) and load in database.
+
+    Can take up to 15 minutes to complete.
+    """
+    try:
+        dbm = DbManager()
+        result = dbm.import_data(force_download=force_download, keep_files=keep_files)
+    except Exception as e:
+        logger.error(f"Error importing data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error importing data. {e}",
+        ) from e
+    return result
+
+
+@app.get("/export_ttls/", tags=[Tag.DB_MANAGE])
+async def get_report(
+    credentials: HTTPBasicCredentials = Depends(verify_credentials),
+    force_create: bool = Query(
+        False,
+        description="Whether to re-generate the TTL files even if they already exist.",
+    ),
+    list_of_tax_ids: str = Query(
+        default="2157,2,2759,10239",
+        description=(
+            "Comma-separated list of tax IDs to generate TTL files for."
+            " If not provided, default tax IDs are used."
+        ),
+    ),
+) -> FileResponse:
+
+    file_path = ZIPPED_TTLS_PATH
+    if not os.path.exists(file_path) or force_create:
+        try:
+            tax_ids: list[int] = [
+                int(x) for x in re.findall(r"\d+", list_of_tax_ids) if x.isdigit()
+            ]
+            TurtleCreator().create_ttls(start_from_tax_ids=tax_ids)
+        except Exception as e:
+            logger.error(f"Error generating TTL files: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error generating TTL files. Data already imported?",
+            ) from e
+    return FileResponse(
+        path=file_path, filename="taxtree_ttls.zip", media_type="application/zip"
+    )
+
+
+@app.get("/import_neo4j/", tags=[Tag.DB_MANAGE])
+async def import_neo4j(
+    credentials: HTTPBasicCredentials = Depends(verify_credentials),
+    uri: str | None = Query(
+        NEO4J_URI,
+        description="The Neo4j URI. If not provided, "
+        "the default from environment variable is used.",
+    ),
+    user: str | None = Query(
+        NEO4J_USER,
+        description="The Neo4j user. If not provided,"
+        " the default from environment variable is used.",
+    ),
+    password: str | None = Query(
+        NEO4J_PASSWORD,
+        description="The Neo4j password. If not provided,"
+        " the default from environment variable is used.",
+    ),
+) -> dict[str, str]:
+    """Import RDF turtle files in Neo4j."""
+    try:
+        if not os.path.exists(ZIPPED_TTLS_PATH):
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                detail=(
+                    "Zipped TTL files not found. Please "
+                    "generate them first using /export_ttls/ endpoint."
+                ),
+            )
+        importer = Neo4jImporter(neo4j_uri=uri, neo4j_user=user, neo4j_pwd=password)
+        importer.import_ttls()
+    except Exception as e:
+        logger.error(f"Error importing data into Neo4j: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error importing data into Neo4j: {e}",
+        ) from e
+    return {"status": "Neo4j import completed successfully."}
 
 
 ###############################################################################
@@ -194,16 +220,12 @@ async def import_data(
 @app.get("/names/search/", response_model=schemas.NameSearchResults, tags=[Tag.NAME])
 async def search_names(
     search: schemas.NameSearch = Depends(),
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 10,
-    session: Session = Depends(get_db),
-):
+    session: Session = Depends(get_session),
+) -> SASearchResults | dict[str, str]:
     return build_dynamic_query(
         search_obj=search,
         model_cls=models.Name,
         db=session,
-        limit=limit,
-        offset=offset,
     )
 
 
@@ -215,10 +237,8 @@ async def search_names(
 @app.get("/node/search/", response_model=schemas.NodeSearchResults, tags=[Tag.NODE])
 async def search_nodes(
     search: schemas.NodeSearch = Depends(),
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 10,
-    session: Session = Depends(get_db),
-):
+    session: Session = Depends(get_session),
+) -> SASearchResults | dict[str, str]:
     """
     Search nodes.
     """
@@ -226,8 +246,6 @@ async def search_nodes(
         search_obj=search,
         model_cls=models.Node,
         db=session,
-        limit=limit,
-        offset=offset,
     )
 
 
@@ -240,7 +258,7 @@ async def search_siblings_nodes(
     tax_id: int,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 10,
-    session: Session = Depends(get_db),
+    session: Session = Depends(get_session),
 ):
     """Search all nodes that have the same parent as the node with the given tax_id.
 
@@ -284,7 +302,7 @@ async def search_descendent_nodes(
     only_leafs: bool = False,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 10,
-    session: Session = Depends(get_db),
+    session: Session = Depends(get_session),
 ):
     """Search all nodes that are descendants of the node with the given tax_id.
 
@@ -337,14 +355,10 @@ async def search_descendent_nodes(
 )
 async def search_ranked_lineage(
     search: schemas.RankedLineageSearch = Depends(),
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 10,
-    session: Session = Depends(get_db),
-):
+    session: Session = Depends(get_session),
+) -> SASearchResults | dict[str, str]:
     return build_dynamic_query(
         search_obj=search,
         model_cls=models.RankedLineage,
         db=session,
-        limit=limit,
-        offset=offset,
     )
