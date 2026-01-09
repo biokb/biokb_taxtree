@@ -1,7 +1,7 @@
 import logging
 import zipfile
 from os import getenv, listdir, path
-from typing import LiteralString, cast
+from typing import LiteralString, Optional, cast
 
 from neo4j import GraphDatabase
 from rdflib import Graph
@@ -170,3 +170,26 @@ class Neo4jImporter:
         neo4j_db.close(True)
 
         return True
+
+
+def import_ttls(
+    neo4j_uri: str | None = None,
+    neo4j_user: str | None = None,
+    neo4j_pwd: str | None = None,
+    delete_existing_graph: bool = True,
+) -> bool:
+    """Import data into Neo4J from zipped turtle files.
+
+    Args:
+        neo4j_uri (str | None): URI of the Neo4j database.
+        neo4j_user (str | None): Username for Neo4j.
+        neo4j_pwd (str | None): Password for Neo4j.
+        delete_existing_graph (bool): delete existing graph before import.
+    Returns:
+        bool: True if import is successful.
+    """
+    importer = Neo4jImporter(
+        neo4j_uri=neo4j_uri, neo4j_user=neo4j_user, neo4j_pwd=neo4j_pwd
+    )
+    result: bool = importer.import_ttls(delete_existing_graph=delete_existing_graph)
+    return result
