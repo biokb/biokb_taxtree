@@ -1,9 +1,12 @@
-# schemas.py
-from datetime import date as date_type
-from typing import List, Optional
-from unittest.mock import Base
+from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class OffsetLimit(BaseModel):
+    limit: Annotated[int, Field(le=100)] = 10
+    offset: int = 0
+
 
 # -------------------------------------------------------------------
 # Node
@@ -32,7 +35,7 @@ class NodeBase(BaseModel):
     inherited_hgc_flag: bool
 
 
-class NodeSearch(BaseModel):
+class NodeSearch(OffsetLimit):
     tax_id: Optional[int] = None
     parent_tax_id: Optional[int] = None
     rank: Optional[str] = None
@@ -104,7 +107,7 @@ class Name(NameBase):
     tax_id: int
 
 
-class NameSearch(BaseModel):
+class NameSearch(OffsetLimit):
     name_txt: Optional[str] = Field(
         None, examples=["Homo sapiens"], description="Textual name for searching"
     )
@@ -145,7 +148,7 @@ class RankedLineageBase(BaseModel):
     domain: Optional[str]
 
 
-class RankedLineageSearch(BaseModel):
+class RankedLineageSearch(OffsetLimit):
     tax_id: Optional[int] = None
     tax_name: Optional[str] = None
     species: Optional[str] = None
