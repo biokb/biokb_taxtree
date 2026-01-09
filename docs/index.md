@@ -1,42 +1,43 @@
-### **BioKb Taxtree: A Python Library for Querying NCBI Taxonomy Data**  
+![BioKb Logo](https://raw.githubusercontent.com/biokb/biokb_taxtree/refs/heads/main/docs/imgs/biokb_logo_writing.png)
+# BioKb-TaxTree
 
-**BioKb Taxtree** is a Python library designed to **load and query data from the NCBI Taxonomy database** in a structured and efficient manner. The library enables users to store taxonomy data in a database, allowing for **fast querying and advanced tree-based searches**.  
+![](https://img.shields.io/pypi/v/biokb_taxtree?color=blue&label=biokb_taxtree&style=flat-square)
+![](https://img.shields.io/pypi/pyversions/biokb_taxtree?style=flat-square)
+![](https://img.shields.io/pypi/l/biokb_taxtree?style=flat-square)
 
-### **Flexible Database Management with SQLAlchemy**  
-A key feature of **BioKb Taxtree** is its **database-agnostic design**, made possible by its integration with **SQLAlchemy**, a powerful Python SQL toolkit and Object-Relational Mapper (ORM). Because of this, the library supports multiple **Database Management Systems (DBMS)**, including:  
 
-- **PostgreSQL**  
-- **MySQL / MariaDB**  
-- **SQLite**  
-- **Microsoft SQL Server**  
-- **Oracle Database**  
 
-This flexibility allows researchers and developers to choose the database system that best fits their needs, whether for **local analysis** (e.g., SQLite) or **enterprise-scale applications** (e.g., PostgreSQL or Oracle).  
+BioKb-TaxTree (biokb_taxtree) is a python package to import TaxTree data into a relational database and create RDF triples (turtles) from it. The turtles can be imported into a Neo4J graph database. The package is part of the [BioKb family of packages](https://github.com/biokb) to create and connect biological and medical knowledge bases and graphs.
 
-### **Querying Name Classes in NCBI Taxonomy**  
-NCBI Taxonomy assigns multiple **name classes** to taxa, reflecting different ways a species or group can be identified. **BioKb Taxtree** allows users to query taxonomy data based on these name classes, including:  
+![Components](https://raw.githubusercontent.com/biokb/biokb_taxtree/refs/heads/main/docs/imgs/components.png)
 
-- **scientific name** (officially recognized name)  
-- **synonym** (alternative names)  
-- **common name** (vernacular names)  
-- **misspelling** (frequent misidentifications)  
-- **authority** (taxonomic authorship details)  
-- **equivalent name** (alternative valid names)  
-- **in-part** (partial names)  
-- **includes** (grouping broader than a single taxon)  
-- **genbank common name** (name used in GenBank records)  
-- **blast name** (name used in BLAST searches)  
+The package provides different options to run it: from command line, as RESTful API server, as Podman/Docker container, or as Podman/Docker networked containers with Neo4J and a relational database.
 
-### **Advanced Tree-Based Searching**  
-The library provides several **functions for navigating the NCBI taxonomy tree**, enabling users to:  
+## Features
 
-✅ **Search for taxa by name or taxonomic ID**  
-✅ **Retrieve parent or child nodes in the hierarchy**  
-✅ **Find sibling taxa**  
-✅ **Trace lineage from a taxon to the root**  
-✅ **List all descendant taxa of a given node**  
+biokb_taxtree allows to ...
 
-Additionally, **BioKb Taxtree** supports **branch-specific searches**, meaning users can **limit queries to specific taxonomic subtrees**, such as all species within a given genus, family, or higher taxonomic rank.  
+1. Query TaxTree data with SQLAlchemy or raw SQL
+2. Load, query and manage TaxTree data with GUIs for knowledge base and graphs (phpMyAdmin, Neo4J Browser)
+3. Query data via a RESTful API (FastAPI) with OpenAPI documentation and interactive Swagger-UI
 
-### **Conclusion**  
-**BioKb Taxtree** is a powerful tool for researchers, bioinformaticians, and database managers working with NCBI taxonomy data. By supporting multiple **DBMS systems via SQLAlchemy** and offering **advanced tree-searching capabilities**, the library enables efficient and flexible taxonomy management for various applications in **genomics, systematics, and biodiversity research**.
+to provide this ***biokb_taxtree*** ...
+
+- imports [TaxTree](https://www.ebi.ac.uk/taxtree/) data into a relational database 
+- creates [RDF](https://www.w3.org/RDF/) triples (turtles) from the relational database
+- imports the RDF triples into a [Neo4J](https://neo4j.com) graph database
+
+***Supported databases***: [SQLite](https://sqlite.org/), [MariaDB](https://go.mariadb.com)/[MySQL](https://www.mysql.com/), [PostgreSQL](https://www.postgresql.org/), [Oracle](https://www.oracle.com/database/), [Microsoft SQL Server](https://www.microsoft.com/en-us/sql-server), and any other database [supported by SQLAlchemy](https://docs.sqlalchemy.org/en/20/core/engines.html#supported-databases).
+
+
+### Options to run BioKb-TaxTree
+
+All biokb packages share the same API and CLI structure. You have different options to run the packages:
+
+1. [from command line](run_the_pipeline.md#from-command-line) (simplest way to get started)
+2. [as RESTful API server](run_the_pipeline.md#as-restful-api-server) (can start directly from command line)
+3. [as Podman/Docker container](run_the_pipeline.md#as-podmandocker-container) (without import into Neo4J, but export of turtles possible)
+4. [as Podman/Docker networked containers](run_the_pipeline.md#as-podmandocker-networked-containers) (with all features) and 3 containers: 
+   1. high-performance relational databases (PostgreSQL, Oracle, MySQL, ...)
+   2. RESTful API (fastAPI) for queries, data import and export
+   3. GUI for querying and administration of MySQL over the Web
