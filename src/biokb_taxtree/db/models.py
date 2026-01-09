@@ -1,3 +1,9 @@
+"""Database models for the biokb_taxtree application.
+
+
+Defines the SQLAlchemy ORM models representing the database schema for taxonomy tree data.
+"""
+
 from typing import Optional
 
 from sqlalchemy import ForeignKey, String, Text
@@ -11,6 +17,36 @@ class Base(DeclarativeBase):
 
 
 class Node(Base):
+    """Model representing a taxonomy node in the GenBank taxonomy database.
+
+
+    Attributes:
+        tax_id (int): Node ID in GenBank taxonomy database (primary key).
+        parent_tax_id (int): Parent node ID in GenBank taxonomy database.
+        rank (str): Rank of this node (e.g., superkingdom, kingdom).
+        embl_code (Optional[str]): Locus-name prefix; not unique.
+        division_id (int): Taxonomy database division ID.
+        inherited_div_flag (bool): 1 if node inherits division from parent.
+        genetic_code_id (int): GenBank genetic code ID.
+        inherited_gc_flag (bool): 1 if node inherits genetic code from parent.
+        mitochondrial_genetic_code_id (int): GenBank mitochondrial genetic code ID.
+        inherited_mgc_flag (bool): 1 if node inherits mitochondrial gencode from parent.
+        genbank_hidden_flag (bool): 1 if name is suppressed in GenBank entry lineage.
+        hidden_subtree_root_flag (bool): 1 if this subtree has no sequence data yet.
+        comments (Optional[str]): Free-text comments and citations.
+        plastid_genetic_code_id (Optional[int]): GenBank plastid genetic code ID.
+        inherited_pgc_flag (Optional[bool]): 1 if node inherits plastid gencode from parent.
+        specified_species (Optional[bool]): 1 if species in the node's lineage has formal name.
+        hydrogenosome_genetic_code_id (Optional[int]): GenBank hydrogenosome genetic code ID.
+        inherited_hgc_flag (Optional[bool]): 1 if node inherits hydrogenosome gencode from parent.
+        tree_id (int): Sorted tree ID.
+        tree_parent_id (Optional[int]): Sorted tree parent ID.
+        level (int): Level in the tree.
+        right_tree_id (int): Right tree ID.
+        is_leaf (bool): Is leaf (has no children).
+        names (List[Name]): Relationship to associated names.
+        ranked_lineage (RankedLineage): Relationship to associated ranked lineage."""
+
     __tablename__ = Base._prefix + "node"
 
     tax_id: Mapped[int] = mapped_column(
@@ -68,9 +104,7 @@ class Node(Base):
         comment="Sorted tree ID", index=True
     )
     level: Mapped[int] = mapped_column(comment="Level in the tree")
-    right_tree_id: Mapped[Optional[int]] = mapped_column(
-        comment="Level in the tree", index=True
-    )
+    right_tree_id: Mapped[int] = mapped_column(comment="Level in the tree", index=True)
     is_leaf: Mapped[bool] = mapped_column(
         comment="Is leaf (has no children)", index=True
     )
@@ -89,6 +123,17 @@ class Node(Base):
 
 
 class Name(Base):
+    """Model representing a name associated with a taxonomy node.
+
+    Attributes:
+        id (int): Primary key.
+        name_txt (str): Text of the name.
+        unique_name (Optional[str]): Unique variant of this name if not unique.
+        name_class (str): Class of the name (e.g., synonym, common name).
+        tax_id (int): Foreign key to the associated Node.
+        node (Node): Relationship to the associated Node.
+    """
+
     __tablename__ = Base._prefix + "name"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -119,6 +164,23 @@ class Name(Base):
 
 
 class RankedLineage(Base):
+    """Model representing the ranked lineage of a taxonomy node.
+
+    Attributes:
+        id (int): Primary key.
+        tax_name (str): Scientific name of the organism.
+        species (Optional[str]): Name of a species (coincide with organism name for species-level nodes).
+        genus (Optional[str]): Genus name.
+        family (Optional[str]): Family name.
+        order (Optional[str]): Order name.
+        class_ (Optional[str]): Class name.
+        phylum (Optional[str]): Phylum name.
+        kingdom (Optional[str]): Kingdom name.
+        domain (Optional[str]): Domain name.
+        tax_id (int): Foreign key to the associated Node.
+        node (Node): Relationship to the associated Node.
+    """
+
     __tablename__ = Base._prefix + "ranked_lineage"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

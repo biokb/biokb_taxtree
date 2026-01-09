@@ -12,7 +12,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import sessionmaker as Sm
 
 from biokb_taxtree.constants import (
-    BIOKB_FOLDER,
     DATA_FOLDER,
     DB_DEFAULT_CONNECTION_STR,
     DOWNLOAD_URL,
@@ -64,14 +63,14 @@ class DbImporter:
         self._path_data_folder: str = DATA_FOLDER
         self._path_zip_file: str = PATH_TO_ZIP_FILE
 
-    def _set_path_zip_file(self, path_zip_file: str):
+    def _set_path_zip_file(self, path_zip_file: str) -> None:
         if not os.path.exists(path_zip_file):
             raise FileNotFoundError(f"Zip file {path_zip_file} does not exist.")
         self._path_zip_file = path_zip_file
 
     def import_data(
         self, force_download: bool = False, keep_files: bool = False
-    ) -> dict[str, int | None]:
+    ) -> dict[str, int]:
         logger.info(f"Start import data with engine {self.engine}")
 
         if force_download or not os.path.exists(self._path_zip_file):
@@ -82,7 +81,7 @@ class DbImporter:
 
         self.__activate_foreign_key_check_in_sqlite()
 
-        import_rows = {}
+        import_rows: dict[str, int] = {}
         import_rows.update(self.__import_nodes())
         import_rows.update(self.__import_ranked_lineage())
         import_rows.update(self.__import_names())
@@ -94,7 +93,7 @@ class DbImporter:
         logger.info("Data imported.")
         return import_rows
 
-    def __activate_foreign_key_check_in_sqlite(self):
+    def __activate_foreign_key_check_in_sqlite(self) -> None:
         """Activate foreign key check in SQLite if engine is SQLite."""
         if self.engine.name == "sqlite":
             with self.Session() as session:
@@ -184,6 +183,36 @@ class DbImporter:
 
         Modifies:
             The `right_tree_id` attribute of each `TreeEntry` in the `tree` dictionary.
+
+
+
+
+        Assigns the right_tree_id for entries in a parent–child tree.
+
+        The right_tree_id of a node is the tree ID you should jump to when moving
+        "to the right" of the node's subtree at the same depth:
+        - If the node has right siblings (siblings with a greater tree_id), right_tree_id
+            is the smallest tree_id among those right siblings (i.e., the immediate next sibling).
+        - If the node has no right sibling, right_tree_id is inherited from its parent,
+            meaning it points to the next position to the right of the parent's subtree.
+        - For the root node (tree_id == 1), right_tree_id is set to max(existing_tree_id) + 1,
+            acting as a sentinel that marks the end of the rightward traversal.
+
+        Notes:
+        - Only the root and non-leaf nodes with a parent are updated by this method; leaf nodes
+            are not explicitly modified here.
+        - This mapping allows constant-time jumps to the next "right" position in a pre-order/
+            sibling traversal without scanning siblings.
+
+                tree (dict[int, TreeEntry]): Dictionary of TreeEntry objects keyed by their tree_id.
+                        Each entry must provide:
+                        - tree_parent_id (int | None): The parent node's ID, or None for the root.
+                        - is_leaf (bool): Whether the node is a leaf.
+                        - right_tree_id (int | None): Will be set/updated by this method.
+
+        Side effects:
+                Mutates TreeEntry.right_tree_id for applicable nodes.
+
         """
 
         tree_pc_dict = defaultdict(list)
@@ -202,7 +231,7 @@ class DbImporter:
             if tree_id == 1:
                 e.right_tree_id = max_tree_id + 1
             # check if id not leaf and parent tree id exists
-            elif not e.is_leaf and e.tree_parent_id != None:
+            elif e.tree_parent_id != None:
                 # get all siblings right to entry
                 sibling_tree_ids = [
                     x for x in tree_pc_dict[e.tree_parent_id] if x > tree_id
@@ -210,10 +239,11 @@ class DbImporter:
                 # if siblings right to entry exists get sibling with the lowest tree id
                 if sibling_tree_ids:
                     e.right_tree_id = min(sibling_tree_ids)
+                # else get right tree id from parent
                 else:
                     e.right_tree_id = tree[e.tree_parent_id].right_tree_id
 
-    def __import_nodes(self) -> dict[str, int | None]:
+    def __import_nodes(self) -> dict[str, int]:
         """Imports taxonomic nodes in the database."""
         logger.info(f"Start import nodes")
 
@@ -243,9 +273,9 @@ class DbImporter:
                 chunksize=100000,
             )
         )
-        return {models.Node.__tablename__: imported_rows}
+        return {models.Node.__tablename__: imported_rows or 0}
 
-    def __import_names(self) -> dict[str, int | None]:
+    def __import_names(self) -> dict[str, int]:
         """Imports taxonomic names into the database."""
 
         logger.info(f"Start import names")
@@ -266,9 +296,9 @@ class DbImporter:
             index=False,
             chunksize=100000,
         )
-        return {models.Name.__tablename__: imported_rows}
+        return {models.Name.__tablename__: imported_rows or 0}
 
-    def __import_ranked_lineage(self) -> dict[str, int | None]:
+    def __import_ranked_lineage(self) -> dict[str, int]:
         """
         Imports ranked lineage data from `rankedlineage.dmp` into the database.
 
@@ -308,4 +338,4 @@ class DbImporter:
             if_exists="append",
             chunksize=100000,
         )
-        return {models.RankedLineage.__tablename__: imported_rows}
+        return {models.RankedLineage.__tablename__: imported_rows or 0}
