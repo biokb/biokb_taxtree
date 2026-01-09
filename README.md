@@ -59,7 +59,6 @@ source .venv/bin/activate
 pip install biokb_taxtree
 ```
 
-
 ## Run BioKb-TaxTree
 
 ### From command line
