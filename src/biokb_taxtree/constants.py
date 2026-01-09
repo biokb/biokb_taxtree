@@ -5,25 +5,33 @@ from collections import defaultdict
 from enum import StrEnum
 from pathlib import Path
 
-HOME = str(Path.home())
-BIOKB_FOLDER = os.path.join(HOME, ".biokb")
+from annotated_types import T
+
+# standard for all biokb projects, but individual set
 PROJECT_NAME = "taxtree"
+BASIC_NODE_LABEL = "DbTaxtree"
+# standard for all biokb projects
+ORGANIZATION = "biokb"
+LIBRARY_NAME = f"{ORGANIZATION}_{PROJECT_NAME}"
+HOME = str(Path.home())
+BIOKB_FOLDER = os.path.join(HOME, f".{ORGANIZATION}")
 PROJECT_FOLDER = os.path.join(BIOKB_FOLDER, PROJECT_NAME)
 DATA_FOLDER = os.path.join(PROJECT_FOLDER, "data")
-os.makedirs(DATA_FOLDER, exist_ok=True)
-LOGS_FOLDER = os.path.join(DATA_FOLDER, "logs")  # where to store log files
-TTL_EXPORT_FOLDER = os.path.join(DATA_FOLDER, "ttls")
-
-DOWNLOAD_URL = "https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.zip"
-PATH_TO_ZIP_FILE = os.path.join(DATA_FOLDER, "taxdmp.zip")
-SQLITE_PATH = os.path.join(BIOKB_FOLDER, "biokb.db")
-DB_DEFAULT_CONNECTION_STR = "sqlite:///" + SQLITE_PATH
+EXPORT_FOLDER = os.path.join(DATA_FOLDER, "ttls")
 ZIPPED_TTLS_PATH = os.path.join(DATA_FOLDER, "ttls.zip")
-
-BASIC_NODE_LABEL = "DbNCBITaxTree"
+SQLITE_PATH = os.path.join(BIOKB_FOLDER, f"{ORGANIZATION}.db")
+DB_DEFAULT_CONNECTION_STR = "sqlite:///" + SQLITE_PATH
 NEO4J_PASSWORD = "neo4j_password"
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
+LOGS_FOLDER = os.path.join(DATA_FOLDER, "logs")  # where to store log files
+TABLE_PREFIX = PROJECT_NAME + "_"
+os.makedirs(DATA_FOLDER, exist_ok=True)
+
+
+# not standard for all biokb projects
+DOWNLOAD_URL = "https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.zip"
+PATH_TO_ZIP_FILE = os.path.join(DATA_FOLDER, "new_taxdump.zip")
 
 
 class DmpFileName(StrEnum):
