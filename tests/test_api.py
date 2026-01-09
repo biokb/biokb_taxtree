@@ -1,11 +1,13 @@
 import os
+from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import Session
 
-from biokb_taxtree.api.main import app, get_db
+from biokb_taxtree.api.main import app, get_session
 from biokb_taxtree.db.importer import DbImporter
 from biokb_taxtree.db.manager import DbManager
 
@@ -24,8 +26,8 @@ TestSessionLocal = sessionmaker(bind=test_engine)
 
 
 # Dependency override to use test database
-def override_get_db():
-    db = TestSessionLocal()
+def override_get_db() -> Generator[Session, None, None]:
+    db: Session = TestSessionLocal()
     try:
         yield db
     finally:
@@ -33,7 +35,7 @@ def override_get_db():
 
 
 # Apply the override to the FastAPI dependency
-app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_session] = override_get_db
 
 
 @pytest.fixture()
@@ -55,14 +57,14 @@ def client_with_data():
     return TestClient(app)
 
 
-def test_server(client_with_data: TestClient):
+def test_server(client_with_data: TestClient) -> None:
     response = client_with_data.get("/")
     assert response.status_code == 200
     assert response.json() == {"msg": "Running!"}
 
 
 class TestName:
-    def test_get_name(self, client_with_data: TestClient):
+    def test_get_name(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/names/search/?name_txt=ancestor")
         assert response.status_code == 200
         data = response.json()
@@ -81,25 +83,25 @@ class TestName:
         }
         assert data == expected
 
-    def test_list_names(self, client_with_data: TestClient):
+    def test_list_names(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/names/search/")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 3
 
-    def test_list_names_offset(self, client_with_data: TestClient):
+    def test_list_names_offset(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/names/search/?offset=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 1
 
-    def test_list_names_limit(self, client_with_data: TestClient):
+    def test_list_names_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/names/search/?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 2
 
-    def test_list_names_offset_limit(self, client_with_data: TestClient):
+    def test_list_names_offset_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/names/search/?offset=2&limit=2")
         assert response.status_code == 200
         data = response.json()
@@ -120,7 +122,7 @@ class TestName:
 
 
 class TestNode:
-    def test_get_node(self, client_with_data: TestClient):
+    def test_get_node(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/node/search/?tax_id=1")
         assert response.status_code == 200
         data = response.json()
@@ -177,25 +179,25 @@ class TestNode:
         }
         assert data == expected
 
-    def test_list_nodes(self, client_with_data: TestClient):
+    def test_list_nodes(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/node/search/")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 3
 
-    def test_list_nodes_offset(self, client_with_data: TestClient):
+    def test_list_nodes_offset(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/node/search/?offset=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 1
 
-    def test_list_nodes_limit(self, client_with_data: TestClient):
+    def test_list_nodes_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/node/search/?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 2
 
-    def test_list_nodes_offset_limit(self, client_with_data: TestClient):
+    def test_list_nodes_offset_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/node/search/?offset=2&limit=2")
         assert response.status_code == 200
         data = response.json()
@@ -254,7 +256,7 @@ class TestNode:
 
 
 class TestRankedLineage:
-    def test_get_lineage(self, client_with_data: TestClient):
+    def test_get_lineage(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/ranked_lineage/search/?tax_id=1")
         assert response.status_code == 200
         data = response.json()
@@ -279,25 +281,25 @@ class TestRankedLineage:
         }
         assert data == expected
 
-    def test_list_lineages(self, client_with_data: TestClient):
+    def test_list_lineages(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/ranked_lineage/search/")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 3
 
-    def test_list_lineages_offset(self, client_with_data: TestClient):
+    def test_list_lineages_offset(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/ranked_lineage/search/?offset=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 1
 
-    def test_list_lineages_limit(self, client_with_data: TestClient):
+    def test_list_lineages_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/ranked_lineage/search/?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]) == 2
 
-    def test_list_lineages_offset_limit(self, client_with_data: TestClient):
+    def test_list_lineages_offset_limit(self, client_with_data: TestClient) -> None:
         response = client_with_data.get("/ranked_lineage/search/?offset=2&limit=2")
         assert response.status_code == 200
         data = response.json()

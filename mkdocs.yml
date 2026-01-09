@@ -1,6 +1,64 @@
-site_name: BioKb TaxTree
-theme:
+site_name: BioKB TaxTree Documentation
+site_url: https://biokb-taxtree.readthedocs.io/
+repo_url: https://github.com/biokb/biokb_taxtree
+theme: 
   name: material
+  font:
+    text: Mulish
+  logo: assets/biokb_logo.svg
+  favicon: assets/biokb_logo.svg
+  features:
+    - navigation.footer
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - navigation.sections     # left sidebar (files)
+    - toc.follow              # right sidebar (headings)
+  language: en
   palette:
-    scheme: slate
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline 
+        name: Switch to dark mode
+      primary: custom
+      accent: custom
+    - scheme: slate 
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode    
+      primary: custom
+      accent: custom
+extra_css:
+  - stylesheets/extra.css
+markdown_extensions:
+  - toc:
+      title: On this page
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Run the pipeline: run_the_pipeline.md
+  - Data model: models.md
+  - CLI: cli.md
+  - notebooks/query_examples.ipynb
+  - How to run Neo4J: how_to_run_neo4j.md
+  - API Reference: api.md
+  - notebooks/test_workflow.ipynb
+  - notebooks/test_workflow_podman.ipynb
+  - notebooks/erdiagram.ipynb
+extra:
+  generator: false
 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+  - mkdocs-jupyter:
+      execute: false
+
+# Optional but recommended for RTD      
+site_url: !ENV READTHEDOCS_CANONICAL_URL
