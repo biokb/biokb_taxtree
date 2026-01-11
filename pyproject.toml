@@ -1,7 +1,7 @@
 [project]
-name = "biokb_taxtree"
-version = "0.1.0"
-description = "Python package to use NCBI taxonomy in the BioKB/Paean framework"
+name = "biokb-taxtree"
+version = "0.1.1"
+description = "Python package to use NCBI taxonomy in the BioKb framework"
 authors = [
     {name = "Christian Ebeling", email = "Christian.Ebeling@scai.fraunhofer.de"},
 ]
@@ -33,6 +33,12 @@ classifiers = [
 keywords = ["knowledge graph", "knowledge base", "taxonomy", "bioinformatics", "Taxtree"]
 readme = "README.md"
 license = {text = "MIT"}
+
+[project.urls]
+Homepage = "https://biokb-taxtree.readthedocs.io"
+Documentation = "https://biokb-taxtree.readthedocs.io"
+Repository = "https://github.com/biokb/biokb_taxtree"
+Issues = "https://github.com/biokb/biokb_taxtree/issues"
 
 [build-system]
 requires = ["hatchling"]

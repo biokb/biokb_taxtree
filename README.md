@@ -1,9 +1,10 @@
 ![docs/imgs/](https://raw.githubusercontent.com/biokb/biokb_taxtree/refs/heads/main/docs/imgs/biokb_logo_writing.png)
 # BioKb-TaxTree
 
-![](https://img.shields.io/pypi/v/biokb_taxtree?color=blue&label=biokb_taxtree&style=flat-square)
-![](https://img.shields.io/pypi/pyversions/biokb_taxtree?style=flat-square)
-![](https://img.shields.io/pypi/l/biokb_taxtree?style=flat-square)
+![](https://img.shields.io/pypi/v/biokb-taxtree?style=flat-square)
+![](https://img.shields.io/pypi/pyversions/biokb-taxtree?style=flat-square)
+![](https://img.shields.io/github/actions/workflow/status/biokb/biokb_taxtree/pypi-publish.yml?style=flat-square)
+![](https://img.shields.io/github/license/biokb/biokb_taxtree?style=flat-square)
 
 
 
