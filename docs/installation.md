@@ -19,7 +19,7 @@ cd biokb_taxtree
 python3 -m venv .venv
 source .venv/bin/activate
 pip install podman-compose
-podman-compose -f docker-compose.db_neo.yml --env-file .env_template up -d
+podman-compose -f docker-compose.mysql_neo4j_pma.yml --env-file .env_template up -d
 ```
 
 Tip: Change the default passwords in the `.env_template` file before starting the containers for better security.

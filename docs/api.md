@@ -22,5 +22,5 @@
 ### import_neo4j
 ::: biokb_taxtree.cli.import_neo4j
 
-### run_api
-::: biokb_taxtree.cli.run_api
+### run_server
+::: biokb_taxtree.cli.run_server

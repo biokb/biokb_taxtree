@@ -3,7 +3,7 @@ import os
 import sqlite3
 from typing import Optional
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.session import sessionmaker as Sm
@@ -17,17 +17,6 @@ from biokb_taxtree.logger import setup_logging
 setup_logging()
 
 logger = logging.getLogger("manager")
-
-
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(
-    dbapi_connection: sqlite3.Connection, _connection_record: object
-) -> None:
-    """Enable foreign key constraint for SQLite."""
-    if isinstance(dbapi_connection, sqlite3.Connection):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
 
 
 class DbManager:
@@ -48,7 +37,10 @@ class DbManager:
         """
         connection_str = os.getenv("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
         self.__engine = engine if engine else create_engine(connection_str)
-        logger.info("Engine %s", self.__engine)
+        if self.__engine.dialect.name == "sqlite":
+            with self.__engine.connect() as connection:
+                connection.execute(text("pragma foreign_keys=ON"))
+        logger.info("Engine: %s", self.__engine)
         self.Session: Sm = sessionmaker(bind=self.__engine)
         self.__importer: Optional[DbImporter] = None
         self.__query: Optional[DbQuery] = None
@@ -83,7 +75,7 @@ class DbManager:
         self.__importer = importer
 
     def import_data(
-        self, force_download: bool = False, keep_files: bool = False
+        self, force_download: bool = False, keep_files: bool = True
     ) -> dict[str, int]:
         return self._importer.import_data(
             force_download=force_download, keep_files=keep_files
@@ -93,7 +85,7 @@ class DbManager:
 def import_data(
     engine: Optional[Engine] = None,
     force_download: bool = False,
-    keep_files: bool = False,
+    keep_files: bool = True,
 ) -> dict[str, int]:
     """Import all data in database.
 

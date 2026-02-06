@@ -88,7 +88,7 @@ app.add_middleware(
 )
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+def run_api(host: str = "0.0.0.0", port: int = 8000) -> None:
     uvicorn.run(
         app="biokb_taxtree.api.main:app",
         host=host,
