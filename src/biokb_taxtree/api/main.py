@@ -31,8 +31,8 @@ from biokb_taxtree.rdf.turtle import TurtleCreator
 logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("api")
 
-USERNAME = os.environ.get("API_USERNAME", "admin")
-PASSWORD = os.environ.get("API_PASSWORD", "admin")
+USERNAME = os.environ.get("TAXTREE_API_USERNAME", "admin")
+PASSWORD = os.environ.get("TAXTREE_API_PASSWORD", "admin")
 
 
 def get_engine() -> Engine:
@@ -176,12 +176,12 @@ async def get_report(
 async def import_neo4j(
     credentials: HTTPBasicCredentials = Depends(verify_credentials),
     uri: str | None = Query(
-        NEO4J_URI,
+        os.environ.get('NEO4J_URI', NEO4J_URI),
         description="The Neo4j URI. If not provided, "
         "the default from environment variable is used.",
     ),
     user: str | None = Query(
-        NEO4J_USER,
+        os.environ.get('NEO4J_USER', NEO4J_USER),
         description="The Neo4j user. If not provided,"
         " the default from environment variable is used.",
     ),
