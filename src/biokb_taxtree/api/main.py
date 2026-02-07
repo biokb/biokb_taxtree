@@ -148,8 +148,9 @@ async def get_report(
     list_of_tax_ids: str = Query(
         default="2157,2,2759,10239",
         description=(
-            "Comma-separated list of tax IDs to generate TTL files for."
-            " If not provided, default tax IDs are used."
+            "Comma-separated list of tax IDs to generate TTL files for. "
+            "If not provided, default tax IDs are used "
+            "(2157=Archaea, 2=Bacteria, 2759=Eukaryota, 10239=Viruses)"
         ),
     ),
 ) -> FileResponse:
@@ -176,12 +177,12 @@ async def get_report(
 async def import_neo4j(
     credentials: HTTPBasicCredentials = Depends(verify_credentials),
     uri: str | None = Query(
-        os.environ.get('NEO4J_URI', NEO4J_URI),
+        os.environ.get("NEO4J_URI", NEO4J_URI),
         description="The Neo4j URI. If not provided, "
         "the default from environment variable is used.",
     ),
     user: str | None = Query(
-        os.environ.get('NEO4J_USER', NEO4J_USER),
+        os.environ.get("NEO4J_USER", NEO4J_USER),
         description="The Neo4j user. If not provided,"
         " the default from environment variable is used.",
     ),
