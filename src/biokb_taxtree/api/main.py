@@ -114,10 +114,10 @@ async def import_data(
             " ensuring the newest version."
         ),
     ),
-    keep_files: bool = Query(
-        True,
+    delete_files: bool = Query(
+        False,
         description=(
-            "Whether to keep the downloaded files"
+            "Whether to delete the downloaded files"
             " after importing them into the database."
         ),
     ),
@@ -128,7 +128,9 @@ async def import_data(
     """
     try:
         dbm = DbManager()
-        result = dbm.import_data(force_download=force_download, keep_files=keep_files)
+        result = dbm.import_data(
+            force_download=force_download, delete_files=delete_files
+        )
     except Exception as e:
         logger.error(f"Error importing data: {e}")
         raise HTTPException(

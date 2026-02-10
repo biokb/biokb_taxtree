@@ -75,17 +75,17 @@ class DbManager:
         self.__importer = importer
 
     def import_data(
-        self, force_download: bool = False, keep_files: bool = True
+        self, force_download: bool = False, delete_files: bool = False
     ) -> dict[str, int]:
         return self._importer.import_data(
-            force_download=force_download, keep_files=keep_files
+            force_download=force_download, delete_files=delete_files
         )
 
 
 def import_data(
     engine: Optional[Engine] = None,
     force_download: bool = False,
-    keep_files: bool = True,
+    delete_files: bool = False,
 ) -> dict[str, int]:
     """Import all data in database.
 
@@ -94,14 +94,16 @@ def import_data(
         force_download (bool, optional): If True, will force download the data, even if
             files already exist. If False, it will skip the downloading part if files
             already exist locally. Defaults to False.
-        keep_files (bool, optional): If True, downloaded files are kept after import.
+        delete_files (bool, optional): If True, downloaded files are deleted after import.
             Defaults to False.
 
     Returns:
         Dict[str, int]: table=key and number of inserted=value
     """
     db_manager = DbManager(engine)
-    return db_manager.import_data(force_download=force_download, keep_files=keep_files)
+    return db_manager.import_data(
+        force_download=force_download, delete_files=delete_files
+    )
 
 
 def get_session(engine: Optional[Engine] = None) -> Session:

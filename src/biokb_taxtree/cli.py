@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -10,7 +11,7 @@ from biokb_taxtree.constants import NEO4J_URI, NEO4J_USER, PROJECT_NAME
 from biokb_taxtree.db.manager import DbManager
 from biokb_taxtree.rdf.neo4j_importer import Neo4jImporter
 from biokb_taxtree.rdf.turtle import TurtleCreator
-import logging
+
 
 def setup_logging(ctx, param, value):
     # Only set up logging if the user actually asks for it
@@ -68,18 +69,18 @@ def main():
 def import_data(
     force_download: bool = False,
     connection_string: str = f"sqlite:///{PROJECT_NAME}.db",
-    keep_files: bool = False,
+    delete_files: bool = False,
 ) -> None:
     """Import data.
 
     Args:
         force_download (bool): Force re-download of the source file (default: False)
         connection_string (str): SQLAlchemy engine URL (default: sqlite:///taxtree.db)
-        keep_files (bool): Keep downloaded source files after import (default: False)
+        delete_files (bool): Delete downloaded source files after import (default: False)
     """
     engine = create_engine(connection_string)
     DbManager(engine=engine).import_data(
-        force_download=force_download, keep_files=keep_files
+        force_download=force_download, delete_files=delete_files
     )
     click.echo(f"Data imported successfully to {connection_string}")
 

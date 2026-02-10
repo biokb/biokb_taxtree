@@ -69,7 +69,7 @@ class DbImporter:
         self._path_zip_file = path_zip_file
 
     def import_data(
-        self, force_download: bool = False, keep_files: bool = False
+        self, force_download: bool = False, delete_files: bool = False
     ) -> dict[str, int]:
         logger.info(f"Start import data with engine {self.engine}")
 
@@ -86,7 +86,7 @@ class DbImporter:
         import_rows.update(self.__import_ranked_lineage())
         import_rows.update(self.__import_names())
 
-        if not keep_files and os.path.exists(self._path_zip_file):
+        if delete_files and os.path.exists(self._path_zip_file):
             os.remove(self._path_zip_file)
             logger.info(f"Removed download file")
 
