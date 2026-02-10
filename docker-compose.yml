@@ -53,6 +53,7 @@ services:
   taxtree:
     build: .
     image: biokb_taxtree_api:latest
+    container_name: biokb_taxtree
     ports:
       - ${TAXTREE_API_PORT}:8000
     environment:
