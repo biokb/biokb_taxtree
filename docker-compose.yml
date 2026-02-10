@@ -54,7 +54,7 @@ services:
     build: .
     image: biokb_taxtree_api:latest
     ports:
-      - 8000:8000
+      - ${TAXTREE_API_PORT}:8000
     environment:
       MYSQL_CONNECTION_STR: ${CONNECTION_STR}
       NEO4J_URI: ${NEO4J_URI}
@@ -62,8 +62,6 @@ services:
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
     volumes:
       - ${BIOKB_FOLDER}:/root/.biokb
-    networks:
-      - biokb_network
 
 volumes:
   mysql_data:
