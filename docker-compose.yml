@@ -52,22 +52,23 @@ services:
       
   taxtree:
     build: .
-    container_name: biokb_taxtree
-    environment:
-      CONNECTION_STR: "mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}"
-      NEO4J_URI: "bolt://${NEO4J_HOST}:${NEO4J_PORT_BOLT}"
-      TAXTREE_API_USERNAME: ${TAXTREE_API_USERNAME}
-      TAXTREE_API_PASSWORD: ${TAXTREE_API_PASSWORD}
-      
+    image: biokb_taxtree_api:latest
     ports:
-      - ${TAXTREE_API_PORT}:8000
+      - 8000:8000
+    environment:
+      MYSQL_CONNECTION_STR: ${CONNECTION_STR}
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
     volumes:
-      - ${TAXTREE_VOLUME}:/root/.biokb/taxtree
+      - ${BIOKB_FOLDER}:/root/.biokb
+    networks:
+      - biokb_network
 
 volumes:
   mysql_data:
   neo4j_data:
-  taxtree_data:
+  biokb_data:
   
 networks:
   default:
