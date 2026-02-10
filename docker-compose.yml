@@ -62,12 +62,13 @@ services:
     ports:
       - ${TAXTREE_API_PORT}:8000
     volumes:
-      - ~/.biokb/taxtree:/root/.biokb/taxtree
+      - ${TAXTREE_VOLUME}:/root/.biokb/taxtree
 
 volumes:
   mysql_data:
   neo4j_data:
-
+  taxtree_data:
+  
 networks:
   default:
     name: biokb_network
