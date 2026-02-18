@@ -53,11 +53,11 @@ def main():
 )
 @click.option(
     "-k",
-    "--keep-files",
+    "--delete-files",
     is_flag=True,
     type=bool,
     default=False,
-    help="Keep downloaded source files after import [default: False]",
+    help="Delete downloaded source files after import [default: False]",
 )
 @click.option(
     "-c",
@@ -67,9 +67,9 @@ def main():
     help=f"SQLAlchemy engine URL [default: sqlite:///{PROJECT_NAME}.db]",
 )
 def import_data(
-    force_download: bool = False,
-    connection_string: str = f"sqlite:///{PROJECT_NAME}.db",
-    delete_files: bool = False,
+    force_download: bool,
+    connection_string: str,
+    delete_files: bool,
 ) -> None:
     """Import data.
 
@@ -93,7 +93,7 @@ def import_data(
     default=f"sqlite:///{PROJECT_NAME}.db",
     help=f"SQLAlchemy engine URL [default: sqlite:///{PROJECT_NAME}.db]",
 )
-def create_ttls(connection_string: str = f"sqlite:///{PROJECT_NAME}.db") -> None:
+def create_ttls(connection_string: str) -> None:
     """Create TTL files from local database.
 
     Args:
