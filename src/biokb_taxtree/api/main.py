@@ -77,6 +77,7 @@ app = FastAPI(
     description="RestfulAPI for NCBI TaxTree-based data. <br><br>Reference: https://www.ncbi.nlm.nih.gov/Taxonomy/",
     version="0.1.0",
     lifespan=lifespan,
+    root_path=os.environ.get("API_TAXTREE_ROOT_PATH", "")
 )
 
 app.add_middleware(
