@@ -53,10 +53,9 @@ def _build_dynamic_query(
     filters = []
 
     # Only the attributes the client actually supplied (`exclude_none`)
-    payload = search_obj.model_dump(exclude_none=True)
+    payload = search_obj.model_dump(exclude_none=True, mode="json")
 
     for field_name, value in payload.items():
-
         # Skip if the SQLAlchemy model has no matching column / hybrid attr
         if not hasattr(model_cls, field_name):
             continue
@@ -90,6 +89,9 @@ def _build_dynamic_query(
                 filters.append(column.between(value[0], value[1]))
             else:
                 filters.append(column == value)
+
+        elif isinstance(origin, type) and issubclass(origin, Enum):
+            filters.append(column == value)
 
         # FALLBACK .....................................................................
         else:
