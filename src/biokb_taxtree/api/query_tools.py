@@ -2,11 +2,13 @@ import logging
 import sys
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Sequence, Type, TypeAlias, Union, get_args, get_origin
 
 from pydantic import BaseModel
-from sqlalchemy import func, inspect, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, select
+from sqlalchemy.dialects import mysql
+from sqlalchemy.orm import Session
 
 from biokb_taxtree.db import models
 
@@ -15,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-from sqlalchemy.dialects import mysql
+
 
 SASearchResults: TypeAlias = dict[
     str,
