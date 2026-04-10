@@ -3,7 +3,9 @@ import os
 from typing import Optional
 
 import click
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 
 from biokb_taxtree import __version__
 from biokb_taxtree.api.main import run_api
@@ -12,13 +14,15 @@ from biokb_taxtree.db.manager import DbManager
 from biokb_taxtree.rdf.neo4j_importer import Neo4jImporter
 from biokb_taxtree.rdf.turtle import TurtleCreator
 
+logger = logging.getLogger("biokb_taxtree")
+
 
 def setup_logging(ctx, param, value):
     # Only set up logging if the user actually asks for it
     if value == 1:
-        logging.getLogger("biokb_ipni").setLevel(logging.INFO)
+        logging.getLogger("biokb_taxtree").setLevel(logging.INFO)
     elif value >= 2:
-        logging.getLogger("biokb_ipni").setLevel(logging.DEBUG)
+        logging.getLogger("biokb_taxtree").setLevel(logging.DEBUG)
 
     # We must add a handler so the logs actually print to the screen
     if value > 0:
@@ -66,10 +70,18 @@ def main():
     default=f"sqlite:///{PROJECT_NAME}.db",
     help=f"SQLAlchemy engine URL [default: sqlite:///{PROJECT_NAME}.db]",
 )
+@click.option(
+    "-e",
+    "--env",
+    type=str,
+    default=None,
+    help="Environment file to load for configuration (default: None)",
+)
 def import_data(
     force_download: bool,
-    connection_string: str,
+    connection_string: Optional[str],
     delete_files: bool,
+    env: Optional[str] = None,
 ) -> None:
     """Import data.
 
@@ -77,12 +89,29 @@ def import_data(
         force_download (bool): Force re-download of the source file (default: False)
         connection_string (str): SQLAlchemy engine URL (default: sqlite:///taxtree.db)
         delete_files (bool): Delete downloaded source files after import (default: False)
+        env (Optional[str]): Environment file to load for configuration (default: None)
     """
-    engine = create_engine(connection_string)
+    if env:
+        if connection_string:
+            logger.warning(
+                "Both environment file and connection string provided. Environment have priority."
+            )
+        if not os.path.exists(env):
+            logger.error("Environment file %s not found.", env)
+            return
+        load_dotenv(env, override=True)
+        connection_string = os.getenv("CONNECTION_STR")
+        if connection_string is None:
+            logger.warning(
+                "CONNECTION_STR environment variable not found. Using default connection string."
+            )
+
+    engine: Engine | None = (
+        create_engine(connection_string) if connection_string else None
+    )
     DbManager(engine=engine).import_data(
         force_download=force_download, delete_files=delete_files
     )
-    click.echo(f"Data imported successfully to {connection_string}")
 
 
 @main.command("create-ttls")
