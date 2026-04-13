@@ -132,6 +132,19 @@ class NameSearchResults(BaseModel):
     results: List[Name]
 
 
+class NameSuggestion(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    name_txt: str
+    name_class: str
+    rank: str | None
+    tax_id: int
+
+
+class NameSuggestions(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    results: List[NameSuggestion]
+
+
 # -------------------------------------------------------------------
 # RankedLineage
 # -------------------------------------------------------------------

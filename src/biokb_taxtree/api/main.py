@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from biokb_taxtree.api import schemas
 from biokb_taxtree.api.query_tools import SASearchResults, build_dynamic_query
+from biokb_taxtree.api.schemas import NameSearchResults
 from biokb_taxtree.api.tags import Tag
 from biokb_taxtree.constants import (
     DB_DEFAULT_CONNECTION_STR,
@@ -77,7 +78,7 @@ app = FastAPI(
     description="RestfulAPI for NCBI TaxTree-based data. <br><br>Reference: https://www.ncbi.nlm.nih.gov/Taxonomy/",
     version="0.1.0",
     lifespan=lifespan,
-    root_path=os.environ.get("API_TAXTREE_ROOT_PATH", "")
+    root_path=os.environ.get("API_TAXTREE_ROOT_PATH", ""),
 )
 
 app.add_middleware(
@@ -230,6 +231,41 @@ async def search_names(
         search_obj=search,
         model_cls=models.Name,
         db=session,
+    )
+
+
+@app.get("/names/suggestions/", response_model=schemas.NameSuggestions, tags=[Tag.NAME])
+async def search_names_suggestions(
+    name_txt: str = Query(
+        ...,
+        description="Text to search for in name_txt field (case-insensitive, partial match)",
+    ),
+    session: Session = Depends(get_session),
+) -> schemas.NameSuggestions:
+    """Search for name suggestions based on partial name_txt match."""
+    stmt = (
+        select(
+            models.Name.name_txt,
+            models.Name.name_class,
+            models.Node.tax_id,
+            models.Node.rank,
+        )
+        .select_from(models.Name)
+        .join(models.Node)
+        .where(models.Name.name_txt.ilike(f"{name_txt}%"))
+        .limit(10)
+    )
+    rows = session.execute(stmt).all()
+    return schemas.NameSuggestions(
+        results=[
+            schemas.NameSuggestion(
+                name_txt=row.name_txt,
+                name_class=row.name_class,
+                tax_id=row.tax_id,
+                rank=row.rank,
+            )
+            for row in rows
+        ]
     )
 
 
