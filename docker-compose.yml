@@ -22,7 +22,17 @@ services:
       --max_heap_table_size=128M
       --sort_buffer_size=128M
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
       interval: 10s
       retries: 5
 
@@ -37,7 +47,16 @@ services:
     volumes:
       - ${NEO4J_VOLUME}:/data
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER}", "-p", "${NEO4J_PASSWORD}", "RETURN 1"]
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "${NEO4J_USER}",
+          "-p",
+          "${NEO4J_PASSWORD}",
+          "RETURN 1",
+        ]
       interval: 10s
       retries: 5
 
@@ -49,7 +68,7 @@ services:
       PMA_PORT: 3306
     ports:
       - "${PHPMYADMIN_PORT}:80"
-      
+
   taxtree:
     build: .
     image: biokb_taxtree_api:latest
@@ -61,6 +80,7 @@ services:
       NEO4J_URI: ${NEO4J_URI}
       NEO4J_USER: ${NEO4J_USER}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      API_TAXTREE_ROOT_PATH: ${API_TAXTREE_ROOT_PATH:-}
       TAXTREE_API_USERNAME: ${TAXTREE_API_USERNAME}
       TAXTREE_API_PASSWORD: ${TAXTREE_API_PASSWORD}
     volumes:
@@ -70,7 +90,7 @@ volumes:
   mysql_data:
   neo4j_data:
   biokb_data:
-  
+
 networks:
   default:
     name: biokb_network

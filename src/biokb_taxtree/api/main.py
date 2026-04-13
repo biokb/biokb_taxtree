@@ -34,6 +34,7 @@ logger = logging.getLogger("api")
 
 USERNAME = os.environ.get("TAXTREE_API_USERNAME", "admin")
 PASSWORD = os.environ.get("TAXTREE_API_PASSWORD", "admin")
+API_ROOT_PATH = os.environ.get("API_TAXTREE_ROOT_PATH", "").rstrip("/")
 
 
 def get_engine() -> Engine:
@@ -78,7 +79,7 @@ app = FastAPI(
     description="RestfulAPI for NCBI TaxTree-based data. <br><br>Reference: https://www.ncbi.nlm.nih.gov/Taxonomy/",
     version="0.1.0",
     lifespan=lifespan,
-    root_path=os.environ.get("API_TAXTREE_ROOT_PATH", ""),
+    root_path=API_ROOT_PATH,
 )
 
 app.add_middleware(
@@ -88,6 +89,17 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+
+@app.middleware("http")
+async def strip_root_prefix_middleware(request, call_next):
+    """Allow both prefixed and non-prefixed paths behind different proxy setups."""
+    if API_ROOT_PATH:
+        path = request.scope.get("path", "")
+        if path == API_ROOT_PATH or path.startswith(f"{API_ROOT_PATH}/"):
+            stripped_path = path[len(API_ROOT_PATH) :] or "/"
+            request.scope["path"] = stripped_path
+    return await call_next(request)
 
 
 def run_api(host: str = "0.0.0.0", port: int = 8000) -> None:
