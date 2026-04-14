@@ -4,9 +4,10 @@
 Defines the SQLAlchemy ORM models representing the database schema for taxonomy tree data.
 """
 
+import enum
 from typing import Optional
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from biokb_taxtree.constants import PROJECT_NAME
@@ -14,6 +15,19 @@ from biokb_taxtree.constants import PROJECT_NAME
 
 class Base(DeclarativeBase):
     _prefix = PROJECT_NAME + "_"
+
+
+class NameClassEnum(enum.Enum):
+    ACRONYM = "acronym"
+    AUTHORITY = "authority"
+    BLAST_NAME = "blast name"
+    COMMON_NAME = "common name"
+    EQUIVALENT_NAME = "equivalent name"
+    GENBANK_COMMON_NAME = "genbank common name"
+    IN_PART = "in-part"
+    INCLUDES = "includes"
+    SCIENTIFIC_NAME = "scientific name"
+    SYNONYM = "synonym"
 
 
 class Node(Base):
@@ -138,12 +152,24 @@ class Name(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    name_txt: Mapped[str] = mapped_column(String(500), index=True, nullable=False)
+    name_txt: Mapped[str] = mapped_column(
+        String(500),
+        index=True,
+        nullable=False,
+        comment="Organism name text (e.g., Escherichia coli, E. coli, etc.)",
+    )
     unique_name: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="Unique variant of this name if not unique"
     )
-    name_class: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="e.g., 'synonym', 'common name'"
+    name_class: Mapped[NameClassEnum] = mapped_column(
+        Enum(
+            NameClassEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        index=True,
+        comment="Class of the name (e.g., synonym, common name)",
     )
 
     # foreign keys
@@ -192,13 +218,6 @@ class RankedLineage(Base):
         String(255),
         comment="name of a species (coincide with organism name for species-level nodes)",
     )
-    genus: Mapped[Optional[str]] = mapped_column(String(255), comment="genus name")
-    family: Mapped[Optional[str]] = mapped_column(String(255), comment="family name")
-    order: Mapped[Optional[str]] = mapped_column(String(255), comment="order name")
-    class_: Mapped[Optional[str]] = mapped_column(String(255), comment="class name")
-    phylum: Mapped[Optional[str]] = mapped_column(String(255), comment="phylum name")
-    kingdom: Mapped[Optional[str]] = mapped_column(String(255), comment="kingdom name")
-    domain: Mapped[Optional[str]] = mapped_column(String(255), comment="domain name")
 
     # foreign keys
     tax_id: Mapped[int] = mapped_column(
@@ -207,9 +226,50 @@ class RankedLineage(Base):
         unique=True,
         comment="node id",
     )
-    # one to one relationship
+    # many to one relationship
     node: Mapped[Node] = relationship(
         back_populates="ranked_lineage", single_parent=True
+    )
+    # foreign key relationships
+    domain_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "domain.id"), nullable=True
+    )
+    domain: Mapped[Optional["Domain"]] = relationship(back_populates="ranked_lineages")
+    kingdom_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "kingdom.id"), nullable=True
+    )
+    kingdom: Mapped[Optional["Kingdom"]] = relationship(
+        back_populates="ranked_lineages",
+    )
+    phylum_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "phylum.id"), nullable=True
+    )
+    phylum: Mapped[Optional["Phylum"]] = relationship(
+        back_populates="ranked_lineages",
+    )
+    class__id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "class_.id"), nullable=True
+    )
+    class_: Mapped[Optional["Class_"]] = relationship(
+        back_populates="ranked_lineages",
+    )
+    order_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "order.id"), nullable=True
+    )
+    order: Mapped[Optional["Order"]] = relationship(
+        back_populates="ranked_lineages",
+    )
+    family_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "family.id"), nullable=True
+    )
+    family: Mapped[Optional["Family"]] = relationship(
+        back_populates="ranked_lineages",
+    )
+    genus_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(Base._prefix + "genus.id"), nullable=True
+    )
+    genus: Mapped[Optional["Genus"]] = relationship(
+        back_populates="ranked_lineages",
     )
 
     def __repr__(self) -> str:
@@ -217,14 +277,142 @@ class RankedLineage(Base):
             f"<{self.__class__.__name__} ("
             f"tax_name={self.tax_name}, "
             f"species={self.species}, "
-            f"genus={self.genus}, "
-            f"family={self.family}, "
-            f"order={self.order}, "
-            f"class_={self.class_}, "
-            f"phylum={self.phylum}, "
-            f"kingdom={self.kingdom}, "
-            f"domain={self.domain})>"
+            f"genus={self.genus.name if self.genus else None}, "
+            f"family={self.family.name if self.family else None}, "
+            f"order={self.order.name if self.order else None}, "
+            f"class_={self.class_.name if self.class_ else None}, "
+            f"phylum={self.phylum.name if self.phylum else None}, "
+            f"kingdom={self.kingdom.name if self.kingdom else None}, "
+            f"domain={self.domain.name if self.domain else None})>"
         )
+
+
+class Domain(Base):
+    """Model representing domain.
+
+    Attributes:
+        id (int): Primary key, ID of the domain.
+        name (str): Name of the domain.
+    """
+
+    __tablename__ = Base._prefix + "domain"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the domain", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="domain")
+
+
+class Kingdom(Base):
+    """Model representing kingdom.
+
+    Attributes:
+        id (int): Primary key, ID of the kingdom.
+        name (str): Name of the kingdom.
+    """
+
+    __tablename__ = Base._prefix + "kingdom"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the kingdom", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(
+        back_populates="kingdom"
+    )
+
+
+class Phylum(Base):
+    """Model representing phylum.
+
+    Attributes:
+        id (int): Primary key, ID of the phylum.
+        name (str): Name of the phylum.
+    """
+
+    __tablename__ = Base._prefix + "phylum"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the phylum", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="phylum")
+
+
+class Class_(Base):
+    """Model representing class.
+
+    Attributes:
+        id (int): Primary key, ID of the class.
+        name (str): Name of the class.
+    """
+
+    __tablename__ = Base._prefix + "class_"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the class", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="class_")
+
+
+class Order(Base):
+    """Model representing order.
+
+    Attributes:
+        id (int): Primary key, ID of the order.
+        name (str): Name of the order.
+    """
+
+    __tablename__ = Base._prefix + "order"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the order", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="order")
+
+
+class Family(Base):
+    """Model representing family.
+
+    Attributes:
+        id (int): Primary key, ID of the family.
+        name (str): Name of the family.
+    """
+
+    __tablename__ = Base._prefix + "family"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the family", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="family")
+
+
+class Genus(Base):
+    """Model representing genus.
+
+    Attributes:
+        id (int): Primary key, ID of the genus.
+        name (str): Name of the genus.
+    """
+
+    __tablename__ = Base._prefix + "genus"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="Name of the genus", index=True
+    )
+    # relationships
+    ranked_lineages: Mapped[list[RankedLineage]] = relationship(back_populates="genus")
 
 
 # TODO: Model to be integrated

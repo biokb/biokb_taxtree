@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import secrets
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator, Generator
 
@@ -10,12 +11,11 @@ from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from sqlalchemy import Engine, and_, create_engine, func, select
+from sqlalchemy import Engine, and_, create_engine, func, literal, select, union_all
 from sqlalchemy.orm import Session
 
 from biokb_taxtree.api import schemas
 from biokb_taxtree.api.query_tools import SASearchResults, build_dynamic_query
-from biokb_taxtree.api.schemas import NameSearchResults
 from biokb_taxtree.api.tags import Tag
 from biokb_taxtree.constants import (
     DB_DEFAULT_CONNECTION_STR,
@@ -236,7 +236,7 @@ async def import_neo4j(
 
 @app.get("/names/search/", response_model=schemas.NameSearchResults, tags=[Tag.NAME])
 async def search_names(
-    search: schemas.NameSearch = Depends(),
+    search: Annotated[schemas.NameSearch, Query()],
     session: Session = Depends(get_session),
 ) -> SASearchResults | dict[str, str]:
     return build_dynamic_query(
@@ -246,12 +246,15 @@ async def search_names(
     )
 
 
+@app.get("/names/classes/", response_model=list[str], tags=[Tag.NAME])
+async def get_name_classes() -> list[str]:
+    """Get all available name classes."""
+    return [e.value for e in models.NameClassEnum]
+
+
 @app.get("/names/suggestions/", response_model=schemas.NameSuggestions, tags=[Tag.NAME])
 async def search_names_suggestions(
-    name_txt: str = Query(
-        ...,
-        description="Text to search for in name_txt field (case-insensitive, partial match)",
-    ),
+    search: schemas.NameSuggestionSearch = Depends(),
     session: Session = Depends(get_session),
 ) -> schemas.NameSuggestions:
     """Search for name suggestions based on partial name_txt match."""
@@ -264,9 +267,11 @@ async def search_names_suggestions(
         )
         .select_from(models.Name)
         .join(models.Node)
-        .where(models.Name.name_txt.ilike(f"{name_txt}%"))
-        .limit(10)
+        .where(models.Name.name_txt.ilike(f"{search.name_txt}%"))
     )
+    if search.name_class:
+        stmt = stmt.where(models.Name.name_class == search.name_class)
+    stmt = stmt.limit(10)
     rows = session.execute(stmt).all()
     return schemas.NameSuggestions(
         results=[
@@ -414,3 +419,53 @@ async def search_ranked_lineage(
         model_cls=models.RankedLineage,
         db=session,
     )
+
+
+###############################################################################
+# Statistics
+###############################################################################
+
+
+@app.post(
+    "/ranked_lineage/statistics/",
+    response_model=schemas.RankedLineageStatisticsResults,
+    tags=[Tag.RANKED_LINEAGE],
+)
+async def get_ranked_lineage_statistics_by_tax_ids(
+    payload: schemas.RankedLineageStatisticsRequest,
+    session: Session = Depends(get_session),
+):
+    """Returns ranked lineage statistics for the given list of tax IDs."""
+    tax_ids = payload.tax_ids
+    rank_specs = [
+        ("domain", models.RankedLineage.domain_id, models.Domain),
+        ("kingdom", models.RankedLineage.kingdom_id, models.Kingdom),
+        ("phylum", models.RankedLineage.phylum_id, models.Phylum),
+        ("class_", models.RankedLineage.class__id, models.Class_),
+        ("order", models.RankedLineage.order_id, models.Order),
+        ("family", models.RankedLineage.family_id, models.Family),
+        ("genus", models.RankedLineage.genus_id, models.Genus),
+    ]
+
+    rank_queries = [
+        select(
+            literal(rank_name).label("rank"),
+            rank_model.name.label("name"),
+            func.count().label("count"),
+        )
+        .select_from(models.RankedLineage)
+        .join(rank_model, lineage_column == rank_model.id)
+        .where(models.RankedLineage.tax_id.in_(tax_ids))
+        .group_by(rank_model.id, rank_model.name)
+        for rank_name, lineage_column, rank_model in rank_specs
+    ]
+
+    stmt = union_all(*rank_queries)
+
+    rows = session.execute(stmt).all()
+
+    results = defaultdict(dict)
+    for rank, name, count in rows:
+        results[rank][name] = count
+
+    return results

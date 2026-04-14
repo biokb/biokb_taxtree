@@ -178,3 +178,4 @@ test.db
 .vscode
 uv.lock
 .env_localhost
+tests/temp.ipynb

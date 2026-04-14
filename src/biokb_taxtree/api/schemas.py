@@ -1,6 +1,8 @@
 from typing import Annotated, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from biokb_taxtree.db.models import NameClassEnum
 
 
 class OffsetLimit(BaseModel):
@@ -109,18 +111,18 @@ class Name(NameBase):
 
 class NameSearch(OffsetLimit):
     name_txt: Optional[str] = Field(
-        None, examples=["Homo sapiens"], description="Textual name for searching"
+        None, description="Textual name for searching", examples=["Homo sapiens"]
     )
     unique_name: Optional[str] = Field(
-        None, examples=["Homo_sapiens"], description="Unique identifier name"
-    )
-    name_class: Optional[str] = Field(
         None,
-        examples=["species"],
-        description="Classification level (e.g., genus, species)",
+        description="Unique identifier name",
+        examples=["Homo sapiens <sensu stricto>"],
+    )
+    name_class: Optional[NameClassEnum] = Field(
+        None, description="Classification of the name"
     )
     tax_id: Optional[int] = Field(
-        None, examples=[9606], description="Taxonomic identifier (NCBI Taxon ID)"
+        None, description="Taxonomic identifier (NCBI Taxon ID)", examples=[9606]
     )
 
 
@@ -130,6 +132,14 @@ class NameSearchResults(BaseModel):
     offset: int
     limit: int
     results: List[Name]
+
+
+class NameSuggestionSearch(BaseModel):
+    name_txt: str = Field(examples=["Achi"], description="Textual name for searching")
+    name_class: Optional[NameClassEnum] = Field(
+        None,
+        description="Classification of the name",
+    )
 
 
 class NameSuggestion(BaseModel):
@@ -149,6 +159,7 @@ class NameSuggestions(BaseModel):
 # RankedLineage
 # -------------------------------------------------------------------
 class RankedLineageBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     tax_id: int
     tax_name: str
     species: Optional[str]
@@ -159,6 +170,25 @@ class RankedLineageBase(BaseModel):
     phylum: Optional[str]
     kingdom: Optional[str]
     domain: Optional[str]
+
+    @field_validator(
+        "genus",
+        "family",
+        "order",
+        "class_",
+        "phylum",
+        "kingdom",
+        "domain",
+        mode="before",
+    )
+    @classmethod
+    def normalize_rank_object_to_name(cls, value: object) -> Optional[str]:
+        if value is None or isinstance(value, str):
+            return value
+        name = getattr(value, "name", None)
+        if isinstance(name, str):
+            return name
+        return str(value)
 
 
 class RankedLineageSearch(OffsetLimit):
@@ -180,3 +210,20 @@ class RankedLineageSearchResults(BaseModel):
     offset: int
     limit: int
     results: List[RankedLineageBase]
+
+
+class RankedLineageStatisticsResults(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    domain: dict[str, int]
+    kingdom: dict[str, int]
+    phylum: dict[str, int]
+    class_: dict[str, int]
+    order: dict[str, int]
+    family: dict[str, int]
+    genus: dict[str, int]
+
+
+class RankedLineageStatisticsRequest(BaseModel):
+    tax_ids: List[int] = Field(
+        ..., description="List of tax IDs to get ranked lineage statistics for"
+    )

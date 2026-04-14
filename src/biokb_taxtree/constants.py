@@ -90,4 +90,4 @@ RANKED_LINEAGE_DTYPES: defaultdict[str, str] = defaultdict(
     },
 )
 
-RANKED_LINEAGE_COLUMNS = list(RANKED_LINEAGE_DTYPES.keys())
+RANKED_LINEAGE_COLUMNS: list[str] = list(RANKED_LINEAGE_DTYPES.keys())

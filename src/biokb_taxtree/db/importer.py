@@ -45,7 +45,6 @@ class TreeEntry:
 
 
 class DbImporter:
-
     def __init__(
         self,
         engine: Optional[Engine] = None,
@@ -82,9 +81,9 @@ class DbImporter:
         self.__activate_foreign_key_check_in_sqlite()
 
         import_rows: dict[str, int] = {}
-        import_rows.update(self.__import_nodes())
-        import_rows.update(self.__import_ranked_lineage())
-        import_rows.update(self.__import_names())
+        import_rows.update(self._import_nodes())
+        import_rows.update(self._import_ranked_lineage())
+        import_rows.update(self._import_names())
 
         if delete_files and os.path.exists(self._path_zip_file):
             os.remove(self._path_zip_file)
@@ -243,7 +242,7 @@ class DbImporter:
                 else:
                     e.right_tree_id = tree[e.tree_parent_id].right_tree_id
 
-    def __import_nodes(self) -> dict[str, int]:
+    def _import_nodes(self) -> dict[str, int]:
         """Imports taxonomic nodes in the database."""
         logger.info(f"Start import nodes")
 
@@ -275,10 +274,10 @@ class DbImporter:
         )
         return {models.Node.__tablename__: imported_rows or 0}
 
-    def __import_names(self) -> dict[str, int]:
+    def _import_names(self) -> dict[str, int]:
         """Imports taxonomic names into the database."""
 
-        logger.info(f"Start import names")
+        logger.info("Start import names")
         with zipfile.ZipFile(PATH_TO_ZIP_FILE) as z:
             with z.open(DmpFileName.NAME) as f:
                 df = pd.read_csv(
@@ -298,7 +297,7 @@ class DbImporter:
         )
         return {models.Name.__tablename__: imported_rows or 0}
 
-    def __import_ranked_lineage(self) -> dict[str, int]:
+    def _import_ranked_lineage(self) -> dict[str, int]:
         """
         Imports ranked lineage data from `rankedlineage.dmp` into the database.
 
@@ -315,7 +314,7 @@ class DbImporter:
                 insertion process.
         """
 
-        logger.info(f"Start import ranked lineage")
+        logger.info("Start import ranked lineage")
         with zipfile.ZipFile(PATH_TO_ZIP_FILE) as z:
             with z.open(DmpFileName.RANKED_LINEAGE) as f:
                 df = pd.read_csv(
@@ -329,13 +328,44 @@ class DbImporter:
                     false_values=["0"],
                     index_col=False,
                 )
-        df.domain = df.domain.str.rstrip("\t|")
+        df["domain"] = df.domain.str.rstrip(
+            "\t|"
+        )  # Remove trailing tab and pipe characters from the domain column
+
+        for column in [
+            "genus",
+            "family",
+            "order",
+            "class_",
+            "phylum",
+            "kingdom",
+            "domain",
+        ]:
+            series_extracted: pd.Series = (
+                df[column].dropna().drop_duplicates().sort_values()
+            )
+            df2 = series_extracted.to_frame(name="name").reset_index(drop=True)
+            df2.index += 1
+            df2.index.name = "id"
+            df2.rename_axis("id").to_sql(
+                models.Base._prefix + column,
+                self.engine,
+                if_exists="append",
+                chunksize=100000,
+            )
+            df2[f"{column}_id"] = df2.index
+            # Merge the extracted names with the original DataFrame to get the corresponding IDs,
+            # then drop the original name columns
+            df: pd.DataFrame = pd.merge(
+                df, df2, how="left", left_on=column, right_on="name"
+            ).drop(columns=[column, "name"])
+
         df.replace({pd.NA: None}, inplace=True)
-        df.set_index("tax_id", inplace=True)
         imported_rows = df.to_sql(
             models.RankedLineage.__tablename__,
             self.engine,
             if_exists="append",
             chunksize=100000,
+            index=False,
         )
         return {models.RankedLineage.__tablename__: imported_rows or 0}
