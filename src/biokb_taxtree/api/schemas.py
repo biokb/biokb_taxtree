@@ -102,6 +102,7 @@ class NameBase(BaseModel):
     name_txt: str
     unique_name: Optional[str]
     name_class: str
+    rank: Optional[str]
 
 
 class Name(NameBase):
@@ -139,6 +140,9 @@ class NameSuggestionSearch(BaseModel):
     name_class: Optional[NameClassEnum] = Field(
         None,
         description="Classification of the name",
+    )
+    rank: Optional[str] = Field(
+        None, description="Taxonomic rank of the name", examples=["species"]
     )
 
 

@@ -179,6 +179,11 @@ class Name(Base):
     # relationships
     node: Mapped[Node] = relationship(back_populates="names")
 
+    @property
+    def rank(self) -> Optional[str]:
+        """Get the taxonomic rank of this name based on its associated node."""
+        return self.node.rank if self.node else None
+
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__} ("
