@@ -67,7 +67,7 @@ def main():
     "-c",
     "--connection-string",
     type=str,
-    default=f"sqlite:///{PROJECT_NAME}.db",
+    default=None,
     help=f"SQLAlchemy engine URL [default: sqlite:///{PROJECT_NAME}.db]",
 )
 @click.option(
