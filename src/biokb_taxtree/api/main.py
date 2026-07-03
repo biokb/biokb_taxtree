@@ -7,12 +7,12 @@ from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator, Generator
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy import Engine, and_, create_engine, func, literal, select, union_all
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from biokb_taxtree.api import schemas
 from biokb_taxtree.api.query_tools import SASearchResults, build_dynamic_query
@@ -43,9 +43,13 @@ def get_engine() -> Engine:
     return engine
 
 
-def get_session() -> Generator[Session, None, None]:
-    engine: Engine = get_engine()
-    session = Session(bind=engine)
+def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    return sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
+
+
+def get_session(request: Request) -> Generator[Session, None, None]:
+    session_factory: sessionmaker[Session] = request.app.state.session_factory
+    session = session_factory()
     try:
         yield session
     finally:
@@ -67,10 +71,11 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(HTTPBasic()))
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize app resources on startup and cleanup on shutdown."""
     engine = get_engine()
+    app.state.engine = engine
+    app.state.session_factory = create_session_factory(engine)
     manager.DbManager(engine)
     yield
-    # Clean up resources if needed
-    pass
+    app.state.engine.dispose()
 
 
 # 3) Create FastAPI App
