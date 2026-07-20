@@ -271,32 +271,26 @@ async def find_similar(
     """
     name = search.name_txt.strip()
     # exact match
-    result = (
-        session.query(models.Name)
-        .filter(models.Name.name_txt.ilike(name))
-        .limit(1)
-        .all()
-    )
+    query = session.query(models.Name).filter(models.Name.name_txt.ilike(name))
+    if search.name_class:
+        query = query.filter(models.Name.name_class == search.name_class)
+    result = query.limit(1).all()
     if result:
         return result
 
     # prefix match
-    result = (
-        session.query(models.Name)
-        .filter(models.Name.name_txt.ilike(f"{name}%"))
-        .limit(search.limit)
-        .all()
-    )
+    query = session.query(models.Name).filter(models.Name.name_txt.ilike(f"{name}%"))
+    if search.name_class:
+        query = query.filter(models.Name.name_class == search.name_class)
+    result = query.limit(search.limit).all()
     if result:
         return result
 
     # fallback: search for scientific name containing the given string
-    result = (
-        session.query(models.Name)
-        .filter(models.Name.name_txt.ilike(f"%{name}%"))
-        .limit(search.limit)
-        .all()
-    )
+    query = session.query(models.Name).filter(models.Name.name_txt.ilike(f"%{name}%"))
+    if search.name_class:
+        query = query.filter(models.Name.name_class == search.name_class)
+    result = query.limit(search.limit).all()
     if result:
         return result
 
@@ -307,12 +301,12 @@ async def find_similar(
         if len(words) >= 2:
             word_list += [x[0] for x in name.split()[2:]]
         search_string = "% ".join(word_list) + "%"
-        result = (
-            session.query(models.Name)
-            .filter(models.Name.name_txt.ilike(search_string))
-            .limit(search.limit)
-            .all()
+        query = session.query(models.Name).filter(
+            models.Name.name_txt.ilike(search_string)
         )
+        if search.name_class:
+            query = query.filter(models.Name.name_class == search.name_class)
+        result = query.limit(search.limit).all()
         if result:
             return result
 
