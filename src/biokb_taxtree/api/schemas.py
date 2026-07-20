@@ -127,6 +127,15 @@ class NameSearch(OffsetLimit):
     )
 
 
+class NameSearchSimilar(OffsetLimit):
+    name_txt: str = Field(
+        ..., description="Textual name for searching", examples=["Homo sapiens"]
+    )
+    name_class: Optional[NameClassEnum] = Field(
+        None, description="Classification of the name"
+    )
+
+
 class NameSearchResults(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     count: int

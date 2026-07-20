@@ -251,6 +251,72 @@ async def search_names(
     )
 
 
+@app.get("/names/similar/", tags=[Tag.NAME])
+async def find_similar(
+    search: Annotated[schemas.NameSearchSimilar, Query()],
+    session: Session = Depends(get_session),
+):
+    """Find similar names based on the provided name_txt and name_class.
+
+    Algorithm:
+    1. Exact match: Search for names that exactly match the provided name_txt.
+    2. Prefix match: If no exact match is found, search for names that start with the provided name_txt.
+    3. Fallback: If no prefix match is found, search for names that contain the provided name_txt anywhere.
+    4. Reduced search: If still no results are found, reduce the first two words (genus and species) to 4 characters each, and search for names that contain this reduced string.
+
+    Parameters:
+    - name_txt: The textual name to search for.
+    - name_class: Optional classification of the name.
+
+    """
+    name = search.name_txt.strip()
+    # exact match
+    result = (
+        session.query(models.Name)
+        .filter(models.Name.name_txt.ilike(name))
+        .limit(1)
+        .all()
+    )
+    if result:
+        return result
+
+    # prefix match
+    result = (
+        session.query(models.Name)
+        .filter(models.Name.name_txt.ilike(f"{name}%"))
+        .limit(search.limit)
+        .all()
+    )
+    if result:
+        return result
+
+    # fallback: search for scientific name containing the given string
+    result = (
+        session.query(models.Name)
+        .filter(models.Name.name_txt.ilike(f"%{name}%"))
+        .limit(search.limit)
+        .all()
+    )
+    if result:
+        return result
+
+    # now reduces the first 2 words (genus, species) to 4 characters each, and then searches for scientific name containing the reduced string
+    words = re.split(r"\s+", name)
+    for i in range(len(words[0]), 1, -1):
+        word_list = [x[:4] for x in name.split()[:2]]
+        if len(words) >= 2:
+            word_list += [x[0] for x in name.split()[2:]]
+        search_string = "% ".join(word_list) + "%"
+        result = (
+            session.query(models.Name)
+            .filter(models.Name.name_txt.ilike(search_string))
+            .limit(search.limit)
+            .all()
+        )
+        if result:
+            return result
+
+
 @app.get("/names/classes/", response_model=list[str], tags=[Tag.NAME])
 async def get_name_classes() -> list[str]:
     """Get all available name classes."""
