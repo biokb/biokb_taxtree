@@ -39,7 +39,7 @@ API_ROOT_PATH = os.environ.get("API_TAXTREE_ROOT_PATH", "").rstrip("/")
 
 def get_engine() -> Engine:
     conn_url = os.environ.get("CONNECTION_STR", DB_DEFAULT_CONNECTION_STR)
-    engine: Engine = create_engine(conn_url)
+    engine: Engine = create_engine(conn_url, pool_pre_ping=True, pool_recycle=3600)
     return engine
 
 

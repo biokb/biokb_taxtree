@@ -77,6 +77,9 @@ docs = [
 [project.scripts]
 biokb_taxtree = "biokb_taxtree.cli:main"
 
+[tool.ruff.lint]
+ignore = ["UP045"]
+
 [tool.black]
 line-length = 88
 target-version = ['py311', 'py312', 'py313']
