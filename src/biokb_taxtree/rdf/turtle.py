@@ -134,7 +134,7 @@ class TurtleCreator:
                                 ns.RELATION_NS["identifier"],
                                 Literal(
                                     taxon.tax_id,
-                                    datatype=XSD.string,
+                                    datatype=XSD.integer,
                                 ),
                             )
                         )
