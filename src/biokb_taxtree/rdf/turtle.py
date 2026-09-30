@@ -79,7 +79,7 @@ class TurtleCreator:
             str: path to zip file
         """
         os.makedirs(constants.EXPORT_FOLDER, exist_ok=True)
-        logging.info("Start creating turtle files.")
+        logger.info("Start creating turtle files.")
         self.__create_nodes_ttl(start_from_tax_ids)
         path_to_zip_file: str = self.create_zip_from_all_ttls()
         return path_to_zip_file
@@ -97,7 +97,7 @@ class TurtleCreator:
                         session.query(no).filter_by(tax_id=start_from_tax_id).first()
                     )
                     if not taxon:
-                        logging.warning(
+                        logger.warning(
                             "Tax id %s not found in database. Skipping...",
                             start_from_tax_id,
                         )
@@ -131,7 +131,7 @@ class TurtleCreator:
                         graph.add(
                             (
                                 node,
-                                ns.RELATION_NS.scientific_name,
+                                ns.RELATION_NS.name,
                                 Literal(
                                     taxon.name_txt,
                                     datatype=XSD.string,
