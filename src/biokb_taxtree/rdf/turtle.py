@@ -3,10 +3,11 @@
 import logging
 import os.path
 import shutil
+from collections.abc import Sequence
 from typing import Optional
 
 from rdflib import RDF, XSD, Graph, Literal, URIRef
-from sqlalchemy import Engine, create_engine, event, select
+from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from biokb_taxtree import constants
@@ -59,7 +60,7 @@ class TurtleCreator:
 
     def create_ttls(
         self,
-        start_from_tax_ids: list[int] = [2157, 2, 2759, 10239],
+        start_from_tax_ids: Sequence[int] = (2157, 2, 2759, 10239),
     ) -> str:
         """Create all RDF turtle, zip all files and returns the path to the zipped file.
 
@@ -84,7 +85,7 @@ class TurtleCreator:
         path_to_zip_file: str = self.create_zip_from_all_ttls()
         return path_to_zip_file
 
-    def __create_nodes_ttl(self, start_from_tax_ids: list[int]) -> None:
+    def __create_nodes_ttl(self, start_from_tax_ids: Sequence[int]) -> None:
         """Create the nodes turtle file."""
         no = models.Node
         na = models.Name
