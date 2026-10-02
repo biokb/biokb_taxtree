@@ -1,7 +1,7 @@
 import logging
 import zipfile
 from os import getenv, listdir, path
-from typing import LiteralString, Optional, cast
+from typing import LiteralString, cast
 
 from neo4j import GraphDatabase
 from rdflib import Graph
