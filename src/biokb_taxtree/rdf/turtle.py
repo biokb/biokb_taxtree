@@ -131,7 +131,7 @@ class TurtleCreator:
                         graph.add(
                             (
                                 node,
-                                ns.RELATION_NS["identifier"],
+                                ns.RELATION_NS["id"],
                                 Literal(
                                     taxon.tax_id,
                                     datatype=XSD.integer,
