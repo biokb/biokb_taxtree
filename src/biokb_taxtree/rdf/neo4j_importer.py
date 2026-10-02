@@ -23,7 +23,6 @@ logger: logging.Logger = logging.getLogger(name=__name__)
 
 
 class Neo4jImporter:
-
     def __init__(
         self,
         neo4j_uri: str | None = None,
@@ -74,7 +73,7 @@ class Neo4jImporter:
                 DETACH DELETE n
                 }} IN TRANSACTIONS OF 1000 ROWS;"""
             cypher = cast(LiteralString, cypher)
-            session.run(cypher)
+            session.run(cypher).consume()
 
     def import_ttl(self, path_or_list: str | list[str]) -> bool:
         """Import single turtle file in Neo4J.
@@ -133,8 +132,8 @@ class Neo4jImporter:
                 "CREATE CONSTRAINT n10s_unique_uri IF NOT EXISTS "
                 "FOR (r:Resource) REQUIRE r.uri IS UNIQUE"
             )
-            session.run(cypher)
-            self.driver.close()
+            session.run(cypher).consume()
+        self.driver.close()
 
         auth_data = {
             "uri": self.neo4j_uri,
