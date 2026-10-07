@@ -190,6 +190,7 @@ class TurtleCreator:
 def create_ttls(
     engine: Optional[Engine] = None,
     export_to_folder: Optional[str] = None,
+    start_from_tax_ids: list[int] = [2157, 2, 2759, 10239],
 ) -> str:
     """Create all turtle files.
 
@@ -197,10 +198,22 @@ def create_ttls(
 
     If export_to_folder=None takes the default path.
 
+    By default it creates 6 files for the following tax ids:
+            - 2157: Archaea
+            - 2: Bacteria
+            - 2759: Eukaryota
+            - 10239: Viruses
+
+            Not included:
+            - 28384: other sequences
+            - 12908: unclassified sequences
+
     Args:
         engine (Engine | None, optional): SQLAlchemy class. Defaults to None.
         export_to_folder (str | None, optional): Folder to export ttl files.
             Defaults to None.
+        start_from_tax_ids (list[int]): A list of Tax IDs to start building the tree from.
+            Defaults to the list given above.
 
     Returns:
         str: path zipped file with ttls.
@@ -208,4 +221,4 @@ def create_ttls(
     ttl_creator = TurtleCreator(engine=engine)
     if export_to_folder:
         ttl_creator._set_ttls_folder(export_to_folder)
-    return ttl_creator.create_ttls()
+    return ttl_creator.create_ttls(start_from_tax_ids)
